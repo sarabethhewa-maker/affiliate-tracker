@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Affiliate {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  tier        String   @default("silver")
+  status      String   @default("active")
+  parentId    String?
+  parent      Affiliate?  @relation("AffiliateTree", fields: [parentId], references: [id])
+  children    Affiliate[] @relation("AffiliateTree")
+  clicks      Click[]
+  conversions Conversion[]
+  createdAt   DateTime @default(now())
+}
+
+model Click {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+}
+
+model Conversion {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  amount      Float
+  createdAt   DateTime  @default(now())
+}
