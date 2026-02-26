@@ -4,8 +4,6 @@ import Anthropic from "@anthropic-ai/sdk";
 const PORTAL_SYSTEM = `You are a helpful assistant for the Biolongevity Labs affiliate program. You answer questions about commissions (up to 20%, tiered), MLM overrides, payouts (Tipalti, PayPal, Venmo, bank transfer), recruiting affiliates, and the application process. Be concise and friendly.`;
 const ADMIN_SYSTEM = `You are a helpful assistant for admins of the Biolongevity Labs affiliate dashboard. You answer questions about top performers, commission settings, approving or rejecting affiliates, revenue, exports, and how to use the admin tools. Be concise and professional.`;
 
-const isDev = process.env.NODE_ENV === "development";
-
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const anthropic = new Anthropic({ apiKey });
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
       system,
       messages: [{ role: "user", content: message }],
@@ -41,14 +39,10 @@ export async function POST(req: NextRequest) {
         : "I couldn't generate a response. Please try again.";
     return NextResponse.json({ configured: true, text });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const fullError = err instanceof Error ? err.stack ?? message : message;
+    const fullError = err instanceof Error ? err.stack ?? err.message : String(err);
     console.error("[api/chat] Error:", fullError);
-    const userMessage = isDev
-      ? message
-      : "The assistant is temporarily unavailable. Please try again.";
     return NextResponse.json(
-      { configured: true, error: userMessage, ...(isDev && { debug: fullError }) },
+      { configured: true, error: "Sorry, I couldn't process that request. Please try again." },
       { status: 200 }
     );
   }
