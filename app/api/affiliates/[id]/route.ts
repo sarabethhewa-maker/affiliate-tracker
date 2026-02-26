@@ -4,6 +4,30 @@ import { prisma } from '@/lib/prisma';
 import { sendAffiliateWelcome } from '@/lib/email';
 import { isValidSlug, sanitizeSlug } from '@/lib/slug';
 
+const AFFILIATE_INCLUDE = {
+  clicks: true,
+  conversions: true,
+  children: true,
+  payouts: true,
+  slugHistory: true,
+} as const;
+
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const err = await requireAdmin();
+  if (err) return err;
+
+  const id = (await params).id;
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { id, deletedAt: null },
+    include: AFFILIATE_INCLUDE,
+  });
+  if (!affiliate) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(affiliate);
+}
+
 function generateReferralCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -42,7 +66,7 @@ export async function PATCH(
         referralCode,
         state: body.state ?? aff.state,
       },
-      include: { clicks: true, conversions: true, children: true },
+      include: AFFILIATE_INCLUDE,
     });
     const origin = req.headers.get('origin') || req.nextUrl.origin;
     const salesLink = updated.slug ? `${origin}/ref/${updated.slug}` : `${origin}/api/ref/${updated.id}`;
@@ -59,30 +83,7 @@ export async function PATCH(
     const updated = await prisma.affiliate.update({
       where: { id },
       data: { status: 'rejected' },
-      include: { clicks: true, conversions: true, children: true },
-    });
-    return NextResponse.json(updated);
-  }
-
-  // slug update (admin)
-  if (body.slug !== undefined) {
-    const slug = sanitizeSlug(String(body.slug));
-    if (!isValidSlug(slug)) {
-      return NextResponse.json(
-        { error: 'Slug must be 3–30 characters, lowercase letters, numbers, and hyphens only' },
-        { status: 400 }
-      );
-    }
-    const taken = await prisma.affiliate.findFirst({
-      where: { slug, NOT: { id } },
-    });
-    if (taken) {
-      return NextResponse.json({ error: 'This link name is already taken' }, { status: 409 });
-    }
-    const updated = await prisma.affiliate.update({
-      where: { id },
-      data: { slug },
-      include: { clicks: true, conversions: true, children: true, payouts: true },
+      include: AFFILIATE_INCLUDE,
     });
     return NextResponse.json(updated);
   }
@@ -93,7 +94,7 @@ export async function PATCH(
     const updated = await prisma.affiliate.update({
       where: { id },
       data: { couponCode: code },
-      include: { clicks: true, conversions: true, children: true, payouts: true },
+      include: AFFILIATE_INCLUDE,
     });
     return NextResponse.json(updated);
   }
@@ -105,21 +106,50 @@ export async function PATCH(
     const updated = await prisma.affiliate.update({
       where: { id },
       data: { storeCredit: aff.storeCredit + body.storeCreditAdd },
-      include: { clicks: true, conversions: true, children: true, payouts: true },
+      include: AFFILIATE_INCLUDE,
     });
     return NextResponse.json(updated);
   }
 
-  // generic update (state, notes, etc.)
-  const data: { state?: string; notes?: string } = {};
-  if (body.state !== undefined) data.state = body.state;
-  if (body.notes !== undefined) data.notes = body.notes;
-  const updated = await prisma.affiliate.update({
-    where: { id },
-    data,
-    include: { clicks: true, conversions: true, children: true },
-  });
-  return NextResponse.json(updated);
+  // contact & social fields
+  const contactData: {
+    email?: string;
+    phone?: string | null;
+    mailingAddress?: string | null;
+    instagramUrl?: string | null;
+    tiktokUrl?: string | null;
+    youtubeUrl?: string | null;
+    websiteUrl?: string | null;
+    state?: string;
+    notes?: string;
+  } = {};
+  if (body.email !== undefined) {
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    if (email) {
+      const existing = await prisma.affiliate.findFirst({ where: { email, NOT: { id } } });
+      if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+      contactData.email = email;
+    }
+  }
+  if (body.phone !== undefined) contactData.phone = typeof body.phone === 'string' ? body.phone.trim() || null : null;
+  if (body.mailingAddress !== undefined) contactData.mailingAddress = typeof body.mailingAddress === 'string' ? body.mailingAddress.trim() || null : null;
+  if (body.instagramUrl !== undefined) contactData.instagramUrl = typeof body.instagramUrl === 'string' ? body.instagramUrl.trim() || null : null;
+  if (body.tiktokUrl !== undefined) contactData.tiktokUrl = typeof body.tiktokUrl === 'string' ? body.tiktokUrl.trim() || null : null;
+  if (body.youtubeUrl !== undefined) contactData.youtubeUrl = typeof body.youtubeUrl === 'string' ? body.youtubeUrl.trim() || null : null;
+  if (body.websiteUrl !== undefined) contactData.websiteUrl = typeof body.websiteUrl === 'string' ? body.websiteUrl.trim() || null : null;
+  if (body.state !== undefined) contactData.state = body.state;
+  if (body.notes !== undefined) contactData.notes = body.notes;
+
+  if (Object.keys(contactData).length > 0) {
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: contactData,
+      include: AFFILIATE_INCLUDE,
+    });
+    return NextResponse.json(updated);
+  }
+
+  return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
 }
 
 export async function DELETE(

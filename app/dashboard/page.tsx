@@ -68,6 +68,12 @@ type Affiliate = {
   tipaltiPayeeId?: string | null;
   tipaltiStatus?: string | null;
   notes?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  youtubeUrl?: string | null;
+  websiteUrl?: string | null;
+  mailingAddress?: string | null;
+  joinedAt?: string | null;
   parent?: Affiliate | null;
   children: Affiliate[];
   clicks: { id: string; createdAt?: string }[];
@@ -327,28 +333,28 @@ export default function Page() {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [highlightedAffiliateId, setHighlightedAffiliateId] = useState<string | null>(null);
   const [savingNotesId, setSavingNotesId] = useState<string | null>(null);
-  const [editingSlugId, setEditingSlugId] = useState<string | null>(null);
-  const [slugEditValue, setSlugEditValue] = useState("");
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
-  const [slugSaving, setSlugSaving] = useState(false);
+  const [slugModal, setSlugModal] = useState<{ affId: string; name: string; currentSlug: string } | null>(null);
+  const [slugModalValue, setSlugModalValue] = useState("");
+  const [slugModalAvailable, setSlugModalAvailable] = useState<boolean | null>(null);
+  const [slugModalSaving, setSlugModalSaving] = useState(false);
   useEffect(() => {
-    if (!editingSlugId || !slugEditValue.trim()) {
-      setSlugAvailable(null);
+    if (!slugModal || slugModalValue.length < 3) {
+      setSlugModalAvailable(null);
       return;
     }
-    const raw = slugEditValue.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+    const raw = slugModalValue.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
     if (raw.length < 3) {
-      setSlugAvailable(null);
+      setSlugModalAvailable(null);
       return;
     }
     const t = setTimeout(() => {
-      fetch(`/api/affiliates/slug/available?slug=${encodeURIComponent(raw)}&excludeId=${encodeURIComponent(editingSlugId)}`)
+      fetch(`/api/affiliates/slug/available?slug=${encodeURIComponent(raw)}&excludeId=${encodeURIComponent(slugModal.affId)}`)
         .then((r) => r.json())
-        .then((d) => setSlugAvailable(d.valid && d.available))
-        .catch(() => setSlugAvailable(null));
+        .then((d) => setSlugModalAvailable(d.valid && d.available))
+        .catch(() => setSlugModalAvailable(null));
     }, 300);
     return () => clearTimeout(t);
-  }, [editingSlugId, slugEditValue]);
+  }, [slugModal, slugModalValue]);
   const [isMobile, setIsMobile] = useState(false);
   const [alerts, setAlerts] = useState<{ id: string; affiliateId: string; type: string; message: string; createdAt: string }[]>([]);
   const [leaderboardMode, setLeaderboardMode] = useState<"month" | "all" | "recruits">("month");
@@ -368,6 +374,9 @@ export default function Page() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ step: 1 | 2; id: string; name: string } | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{ affId: string; field: string } | null>(null);
+  const [inlineEditValue, setInlineEditValue] = useState("");
+  const [inlineSaving, setInlineSaving] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -1248,33 +1257,15 @@ export default function Page() {
                             {aff.status !== "active" && <StatusBadge status={aff.status} />}
                             {aff.state && <span style={{ color: THEME.textMuted, fontSize: 11 }}>{aff.state}</span>}
                           </div>
+                          <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 2 }}>
+                            {aff.email}
+                            {aff.phone ? ` · ${aff.phone}` : ""}
+                            {" · Joined "}
+                            {new Date(aff.joinedAt || aff.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                          </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
                             <span style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace" }}>Sales: {salesLink}</span>
-                            {editingSlugId !== aff.id ? (
-                              <button type="button" onClick={() => { setEditingSlugId(aff.id); setSlugEditValue(aff.slug ?? ""); setSlugAvailable(null); }} title="Edit link slug" style={{ background: "none", border: "none", padding: 2, cursor: "pointer", color: THEME.textMuted, fontSize: 12 }}>✏️</button>
-                            ) : (
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <input
-                                  value={slugEditValue}
-                                  onChange={(e) => setSlugEditValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30))}
-                                  placeholder="slug"
-                                  style={{ width: 120, padding: "4px 8px", fontSize: 11, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 4 }}
-                                />
-                                {slugEditValue.length >= 3 && slugAvailable === true && <span style={{ color: THEME.success }} title="Available">✓</span>}
-                                {slugEditValue.length >= 3 && slugAvailable === false && <span style={{ color: THEME.error }} title="Taken">✗</span>}
-                                <button type="button" disabled={slugSaving || slugEditValue.length < 3 || slugAvailable !== true} onClick={async () => {
-                                  if (slugEditValue.length < 3 || slugAvailable !== true) return;
-                                  setSlugSaving(true);
-                                  try {
-                                    await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugEditValue }) });
-                                    fetchAffiliates();
-                                    setEditingSlugId(null);
-                                    setSlugEditValue("");
-                                  } finally { setSlugSaving(false); }
-                                }} style={{ padding: "4px 10px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: slugSaving ? "not-allowed" : "pointer" }}>{slugSaving ? "…" : "Save"}</button>
-                                <button type="button" onClick={() => { setEditingSlugId(null); setSlugEditValue(""); setSlugAvailable(null); }} style={{ padding: "4px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
-                              </span>
-                            )}
+                            <button type="button" onClick={() => { setSlugModal({ affId: aff.id, name: aff.name, currentSlug: aff.slug ?? "" }); setSlugModalValue(aff.slug ?? ""); setSlugModalAvailable(null); }} title="Edit link slug" style={{ padding: "2px 8px", fontSize: 11, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit slug</button>
                           </div>
                           {aff.slug && <div style={{ color: THEME.textMuted, fontSize: 10, marginBottom: 2 }}>Legacy: {legacyLink} — Old link still works</div>}
                           {recruitLink && <div style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace", marginBottom: 4 }}>Recruit: {recruitLink}</div>}
@@ -1304,6 +1295,103 @@ export default function Page() {
                                 }} style={{ padding: "4px 10px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: couponSaving ? "not-allowed" : "pointer" }}>{couponSaving ? "…" : "Save"}</button>
                                 <button type="button" onClick={() => { setEditingCouponId(null); setCouponEditValue(""); }} style={{ padding: "4px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
                               </span>
+                            )}
+                          </div>
+                          {/* Contact Info */}
+                          <div style={{ marginTop: 12, padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
+                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Contact Info</div>
+                            {(["email", "phone", "mailingAddress"] as const).map((field) => {
+                              const label = field === "email" ? "Email" : field === "phone" ? "Phone" : "Mailing address";
+                              const val = field === "email" ? aff.email : field === "phone" ? aff.phone : aff.mailingAddress;
+                              const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === field;
+                              return (
+                                <div key={field} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                                  <span style={{ color: THEME.textMuted, fontSize: 12, minWidth: 100 }}>{label}:</span>
+                                  {isEditing ? (
+                                    <>
+                                      <input
+                                        type={field === "email" ? "email" : "text"}
+                                        value={inlineEditValue}
+                                        onChange={(e) => setInlineEditValue(e.target.value)}
+                                        style={{ flex: 1, minWidth: 180, padding: "6px 10px", fontSize: 12, border: `1px solid ${THEME.border}`, borderRadius: 6 }}
+                                        placeholder={field === "mailingAddress" ? "Street, city, state, zip" : ""}
+                                      />
+                                      <button type="button" disabled={inlineSaving} onClick={async () => {
+                                        setInlineSaving(true);
+                                        try {
+                                          const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: inlineEditValue }) });
+                                          if (!res.ok) throw new Error((await res.json()).error || "Failed");
+                                          fetchAffiliates();
+                                          setInlineEdit(null);
+                                          setSuccessToast("Saved");
+                                          setTimeout(() => setSuccessToast(null), 2000);
+                                        } catch {
+                                          setSuccessToast("Failed to save");
+                                          setTimeout(() => setSuccessToast(null), 2000);
+                                        } finally { setInlineSaving(false); }
+                                      }} style={{ padding: "4px 10px", fontSize: 11, background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, cursor: inlineSaving ? "not-allowed" : "pointer" }}>{inlineSaving ? "…" : "Save"}</button>
+                                      <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "4px 10px", fontSize: 11, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 6, cursor: "pointer" }}>Cancel</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span style={{ color: val ? THEME.text : "#9ca3af", fontSize: 12 }}>{val || "Not provided"}</span>
+                                      <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field }); setInlineEditValue(val ?? ""); }} style={{ padding: "2px 6px", fontSize: 10, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{val ? "Edit" : "Add"}</button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* Social Media */}
+                          <div style={{ marginTop: 12, padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
+                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Social Media</div>
+                            {[
+                              { key: "instagramUrl" as const, label: "Instagram", icon: "📷", href: aff.instagramUrl },
+                              { key: "tiktokUrl" as const, label: "TikTok", icon: "🎵", href: aff.tiktokUrl },
+                              { key: "youtubeUrl" as const, label: "YouTube", icon: "▶️", href: aff.youtubeUrl },
+                              { key: "websiteUrl" as const, label: "Website", icon: "🌐", href: aff.websiteUrl },
+                            ].map(({ key, label, icon, href }) => {
+                              const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === key;
+                              return (
+                                <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                                  <span style={{ color: THEME.textMuted, fontSize: 12, minWidth: 80 }}>{icon} {label}:</span>
+                                  {isEditing ? (
+                                    <>
+                                      <input type="url" value={inlineEditValue} onChange={(e) => setInlineEditValue(e.target.value)} placeholder="https://..." style={{ flex: 1, minWidth: 200, padding: "6px 10px", fontSize: 12, border: `1px solid ${THEME.border}`, borderRadius: 6 }} />
+                                      <button type="button" disabled={inlineSaving} onClick={async () => {
+                                        setInlineSaving(true);
+                                        try {
+                                          const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: inlineEditValue }) });
+                                          if (!res.ok) throw new Error((await res.json()).error || "Failed");
+                                          fetchAffiliates();
+                                          setInlineEdit(null);
+                                          setSuccessToast("Saved");
+                                          setTimeout(() => setSuccessToast(null), 2000);
+                                        } catch {
+                                          setSuccessToast("Failed to save");
+                                          setTimeout(() => setSuccessToast(null), 2000);
+                                        } finally { setInlineSaving(false); }
+                                        }} style={{ padding: "4px 10px", fontSize: 11, background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, cursor: inlineSaving ? "not-allowed" : "pointer" }}>{inlineSaving ? "…" : "Save"}</button>
+                                      <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "4px 10px", fontSize: 11, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 6, cursor: "pointer" }}>Cancel</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      {href ? (
+                                        <a href={href.startsWith("http") ? href : "https://" + href} target="_blank" rel="noopener noreferrer" style={{ color: "#1a4a8a", fontSize: 12 }}>{href}</a>
+                                      ) : (
+                                        <span style={{ color: "#9ca3af", fontSize: 12 }}>Not provided</span>
+                                      )}
+                                      <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field: key }); setInlineEditValue(href ?? ""); }} style={{ padding: "2px 6px", fontSize: 10, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{href ? "Edit" : "Add"}</button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {aff.socialHandle && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                <span style={{ color: THEME.textMuted, fontSize: 12 }}>Handle:</span>
+                                <span style={{ color: THEME.text, fontSize: 12 }}>{aff.socialHandle}</span>
+                              </div>
                             )}
                           </div>
                           <VolumeProgressBar monthlyRevenue={monthlyRev} nextThreshold={vol.nextThreshold} progress={vol.progress} />
@@ -1793,6 +1881,60 @@ export default function Page() {
                   setStoreCreditAmount("");
                 } finally { setStoreCreditSaving(false); }
               }} style={{ flex: 2, padding: "11px 0", background: THEME.accent, border: "none", borderRadius: 8, color: "#fff", cursor: storeCreditSaving ? "not-allowed" : "pointer", fontWeight: 700 }}>{storeCreditSaving ? "Adding…" : "Add store credit"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Slug edit modal */}
+      {slugModal && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, width: 420, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ color: THEME.text, fontSize: 18, fontWeight: 700 }}>Edit tracking slug — {slugModal.name}</div>
+              <button onClick={() => { setSlugModal(null); setSlugModalValue(""); setSlugModalAvailable(null); }} style={{ background: "none", border: "none", color: THEME.textMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 12 }}>Lowercase letters, numbers, and hyphens only. Min 3 characters. The old slug will redirect to the new one.</p>
+            <input
+              type="text"
+              value={slugModalValue}
+              onChange={(e) => setSlugModalValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30))}
+              placeholder="e.g. sarabeth"
+              style={{ width: "100%", padding: "10px 12px", fontSize: 14, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 8, marginBottom: 8 }}
+            />
+            {slugModalValue.length > 0 && slugModalValue.length < 3 && <div style={{ color: THEME.error, fontSize: 12, marginBottom: 8 }}>At least 3 characters required</div>}
+            {slugModalValue.length >= 3 && slugModalAvailable === true && <div style={{ color: THEME.success, fontSize: 12, marginBottom: 8 }}>✓ Available</div>}
+            {slugModalValue.length >= 3 && slugModalAvailable === false && <div style={{ color: THEME.error, fontSize: 12, marginBottom: 8 }}>✗ Already taken or reserved</div>}
+            <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 16 }}>
+              Preview: {typeof window !== "undefined" ? window.location.origin : ""}/ref/{slugModalValue || "…"}
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => { setSlugModal(null); setSlugModalValue(""); setSlugModalAvailable(null); }} style={{ flex: 1, padding: "10px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+              <button
+                disabled={slugModalSaving || slugModalValue.length < 3 || slugModalAvailable !== true}
+                onClick={async () => {
+                  if (slugModalValue.length < 3 || slugModalAvailable !== true) return;
+                  setSlugModalSaving(true);
+                  try {
+                    const res = await fetch("/api/affiliates/" + slugModal.affId + "/slug", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ newSlug: slugModalValue }) });
+                    if (!res.ok) {
+                      const d = await res.json().catch(() => ({}));
+                      setSuccessToast(d.error || "Failed");
+                      setTimeout(() => setSuccessToast(null), 2000);
+                      return;
+                    }
+                    fetchAffiliates();
+                    setSlugModal(null);
+                    setSlugModalValue("");
+                    setSlugModalAvailable(null);
+                    setSuccessToast("Slug updated. Old link will redirect.");
+                    setTimeout(() => setSuccessToast(null), 2000);
+                  } finally { setSlugModalSaving(false); }
+                }}
+                style={{ flex: 1, padding: "10px 0", background: "#1a4a8a", border: "none", borderRadius: 8, color: "#fff", cursor: slugModalSaving ? "not-allowed" : "pointer", fontWeight: 600 }}
+              >
+                {slugModalSaving ? "Saving…" : "Save"}
+              </button>
             </div>
           </div>
         </div>

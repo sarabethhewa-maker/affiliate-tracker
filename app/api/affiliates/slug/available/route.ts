@@ -14,11 +14,18 @@ export async function GET(req: NextRequest) {
   }
 
   const excludeId = req.nextUrl.searchParams.get('excludeId') ?? undefined;
-  const existing = await prisma.affiliate.findFirst({
+  const existingAffiliate = await prisma.affiliate.findFirst({
     where: {
       slug: raw,
       ...(excludeId ? { NOT: { id: excludeId } } : {}),
     },
   });
-  return NextResponse.json({ available: !existing, valid: true });
+  if (existingAffiliate) return NextResponse.json({ available: false, valid: true });
+
+  const inHistory = await prisma.slugHistory.findFirst({
+    where: { oldSlug: raw },
+  });
+  if (inHistory) return NextResponse.json({ available: false, valid: true });
+
+  return NextResponse.json({ available: true, valid: true });
 }

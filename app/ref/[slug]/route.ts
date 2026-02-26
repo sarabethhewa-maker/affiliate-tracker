@@ -15,12 +15,30 @@ export async function GET(
     return NextResponse.redirect(REDIRECT_URL);
   }
 
-  const affiliate = await prisma.affiliate.findFirst({
+  let affiliate = await prisma.affiliate.findFirst({
     where: { slug, deletedAt: null, archivedAt: null },
-    select: { id: true, name: true },
+    select: { id: true, name: true, slug: true },
   });
 
   if (!affiliate) {
+    const history = await prisma.slugHistory.findFirst({
+      where: { oldSlug: slug },
+      select: { affiliateId: true },
+    });
+    if (history) {
+      const current = await prisma.affiliate.findUnique({
+        where: { id: history.affiliateId, deletedAt: null, archivedAt: null },
+        select: { slug: true },
+      });
+      if (current?.slug) {
+        const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || '';
+        const protocol = req.headers.get('x-forwarded-proto') || 'https';
+        if (host) {
+          const newUrl = `${protocol === 'https' ? 'https' : 'http'}://${host}/ref/${current.slug}`;
+          return NextResponse.redirect(newUrl, 301);
+        }
+      }
+    }
     return NextResponse.redirect(REDIRECT_URL);
   }
 

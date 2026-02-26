@@ -28,11 +28,18 @@ model Affiliate {
   notes            String?   // private admin notes, never shown to affiliate
   archivedAt       DateTime? // null = active; set when archived (hidden from list, no new commissions)
   deletedAt        DateTime? // null = not deleted; set when soft-deleted (excluded from all queries)
+  instagramUrl     String?
+  tiktokUrl        String?
+  youtubeUrl       String?
+  websiteUrl       String?
+  mailingAddress   String?
+  joinedAt         DateTime? @default(now())
   parent           Affiliate?   @relation("AffiliateTree", fields: [parentId], references: [id])
   children         Affiliate[]  @relation("AffiliateTree")
   clicks           Click[]
   conversions      Conversion[]
   payouts          Payout[]
+  slugHistory      SlugHistory[]
   createdAt        DateTime  @default(now())
 }
 
@@ -110,4 +117,12 @@ model ImportLog {
   errorCount     Int
   details        Json?    // optional details (e.g. errors)
   createdAt      DateTime @default(now())
+}
+
+model SlugHistory {
+  id          String   @id @default(cuid())
+  affiliateId String
+  oldSlug     String
+  changedAt   DateTime @default(now())
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 }
