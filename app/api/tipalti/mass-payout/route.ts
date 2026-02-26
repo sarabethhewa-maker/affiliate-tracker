@@ -49,12 +49,13 @@ export async function POST(req: NextRequest) {
     payments = body.payments as PaymentItem[];
   } else if (Array.isArray(body.affiliateIds)) {
     const affiliateIds = body.affiliateIds as string[];
+    const activeWhere = { status: 'active' as const, deletedAt: null, archivedAt: null };
     const affiliates = await prisma.affiliate.findMany({
-      where: { id: { in: affiliateIds }, status: 'active' },
+      where: { id: { in: affiliateIds }, ...activeWhere },
       include: { conversions: true },
     });
     const allActive = await prisma.affiliate.findMany({
-      where: { status: 'active' },
+      where: activeWhere,
       include: { conversions: true },
     });
     const settings = await getSettings();
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   const affiliateIds = payments.map((p) => p.affiliateId);
   const affiliates = await prisma.affiliate.findMany({
-    where: { id: { in: affiliateIds }, status: 'active' },
+    where: { id: { in: affiliateIds }, status: 'active', deletedAt: null, archivedAt: null },
   });
   const affMap = new Map(affiliates.map((a) => [a.id, a]));
 

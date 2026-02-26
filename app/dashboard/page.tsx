@@ -75,6 +75,8 @@ type Affiliate = {
   payouts?: { id: string; amount: number; method?: string; note?: string | null; paidAt: string; tipaltiRefCode?: string | null; payoutStatus?: string | null }[];
   couponCode?: string | null;
   storeCredit?: number;
+  archivedAt?: string | null;
+  deletedAt?: string | null;
   createdAt: string;
 };
 
@@ -361,6 +363,11 @@ export default function Page() {
   const [storeCreditModal, setStoreCreditModal] = useState<{ affId: string; affName: string } | null>(null);
   const [storeCreditAmount, setStoreCreditAmount] = useState("");
   const [storeCreditSaving, setStoreCreditSaving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; name: string; archived: boolean } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ step: 1 | 2; id: string; name: string } | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -397,7 +404,8 @@ export default function Page() {
   const fetchAffiliates = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/affiliates");
+      const url = showArchived ? "/api/affiliates?showArchived=true" : "/api/affiliates";
+      const res = await fetch(url);
       const text = await res.text();
       let data: unknown;
       try {
@@ -418,6 +426,10 @@ export default function Page() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (tab === "affiliates") fetchAffiliates();
+  }, [tab, showArchived]);
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -1201,8 +1213,14 @@ export default function Page() {
                   })}
                 </div>
               )}
-              <input placeholder="Search affiliates..." value={search} onChange={e => setSearch(e.target.value)}
-                style={{ width: "100%", marginBottom: 16, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px", color: THEME.text, fontSize: 13, outline: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: THEME.textMuted }}>
+                  <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} style={{ accentColor: THEME.accent }} />
+                  Show Archived
+                </label>
+                <input placeholder="Search affiliates..." value={search} onChange={e => setSearch(e.target.value)}
+                  style={{ flex: 1, minWidth: 200, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px", color: THEME.text, fontSize: 13, outline: "none" }} />
+              </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {filtered.map(aff => {
                   const rev = aff.conversions.reduce((s, c) => s + c.amount, 0);
@@ -1217,13 +1235,15 @@ export default function Page() {
                   const referrerPct = parentVol ? (TIERS[parentVol.tierKey]?.mlm2 ?? 3) : 0;
                   const referralRevenue = affiliates.filter(c => c.parentId === aff.id).reduce((s, c) => s + c.conversions.reduce((x, cv) => x + cv.amount, 0), 0);
                   const myEarnFromReferrals = referralRevenue * (TIERS[vol.tierKey]?.mlm2 ?? 3) / 100;
+                  const isArchived = !!aff.archivedAt;
                   return (
-                    <div key={aff.id} style={{ background: highlightedAffiliateId === aff.id ? "#e0f2fe" : THEME.card, border: `2px solid ${highlightedAffiliateId === aff.id ? THEME.accentLight : THEME.border}`, borderRadius: 10, padding: "16px 20px", transition: "border 0.2s, background 0.2s" }}>
+                    <div key={aff.id} style={{ background: highlightedAffiliateId === aff.id ? "#e0f2fe" : THEME.card, border: `2px solid ${highlightedAffiliateId === aff.id ? THEME.accentLight : THEME.border}`, borderRadius: 10, padding: "16px 20px", transition: "border 0.2s, background 0.2s", opacity: isArchived ? 0.92 : 1 }}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" as const }}>
                         <div style={{ width: 42, height: 42, borderRadius: "50%", background: TIERS[vol.tierKey]?.bg, border: `2px solid ${TIERS[vol.tierKey]?.color}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: TIERS[vol.tierKey]?.color, flexShrink: 0 }}>{aff.name.charAt(0)}</div>
                         <div style={{ flex: 1, minWidth: 200 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" as const }}>
                             <span style={{ color: THEME.text, fontWeight: 700, fontSize: 14 }}>{aff.name}</span>
+                            {isArchived && <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>ARCHIVED</span>}
                             <TierBadge tier={vol.tierKey} TIERS={TIERS} />
                             {aff.status !== "active" && <StatusBadge status={aff.status} />}
                             {aff.state && <span style={{ color: THEME.textMuted, fontSize: 11 }}>{aff.state}</span>}
@@ -1376,6 +1396,12 @@ export default function Page() {
                             <>
                               <button onClick={() => approveAffiliate(aff.id)} style={{ padding: "6px 12px", background: THEME.successBg, border: "none", borderRadius: 6, color: THEME.success, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
                               <button onClick={() => rejectAffiliate(aff.id, aff.name)} style={{ padding: "6px 12px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 11 }}>Reject</button>
+                            </>
+                          )}
+                          {aff.status === "active" && (
+                            <>
+                              <button onClick={() => setArchiveConfirm({ id: aff.id, name: aff.name, archived: isArchived })} style={{ padding: "6px 12px", background: isArchived ? "#dcfce7" : "#fef3c7", border: `1px solid ${isArchived ? THEME.success : "#b45309"}`, borderRadius: 6, color: isArchived ? THEME.success : "#b45309", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{isArchived ? "Unarchive" : "Archive"}</button>
+                              <button onClick={() => { setDeleteConfirm({ step: 1, id: aff.id, name: aff.name }); setDeleteConfirmName(""); }} style={{ padding: "6px 12px", background: "#dc2626", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 11 }}>Delete Affiliate</button>
                             </>
                           )}
                         </div>
@@ -1657,6 +1683,87 @@ export default function Page() {
               <button onClick={confirmPayModal} style={{ flex: 2, padding: "11px 0", background: "#6d28d9", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 }}>Confirm</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Archive confirmation modal */}
+      {archiveConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 32, width: 400 }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: THEME.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+                {archiveConfirm.archived ? `Unarchive ${archiveConfirm.name}?` : `Archive ${archiveConfirm.name}?`}
+              </div>
+              <p style={{ color: THEME.textMuted, fontSize: 14, margin: 0 }}>
+                {archiveConfirm.archived
+                  ? "They will appear in the active list again and their tracking links and coupon will work."
+                  : "They will be hidden from the active list but their data will be preserved. You can unarchive them anytime. They will not receive commission on new orders and their tracking links and coupon codes will stop working."}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => setArchiveConfirm(null)} style={{ flex: 1, padding: "11px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+              <button onClick={async () => {
+                if (!archiveConfirm) return;
+                try {
+                  await fetch("/api/affiliates/" + archiveConfirm.id + "/archive", { method: "PATCH" });
+                  fetchAffiliates();
+                  setArchiveConfirm(null);
+                } catch { /* ignore */ }
+              }} style={{ flex: 1, padding: "11px 0", background: archiveConfirm.archived ? THEME.success : "#f0c040", border: "none", borderRadius: 8, color: "#1a1a2e", cursor: "pointer", fontWeight: 600 }}>{archiveConfirm.archived ? "Unarchive" : "Archive"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal (two steps) */}
+      {deleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 32, width: 440 }}>
+            {deleteConfirm.step === 1 ? (
+              <>
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ color: THEME.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Delete {deleteConfirm.name}?</div>
+                  <p style={{ color: THEME.textMuted, fontSize: 14, margin: 0 }}>This will permanently remove this affiliate and all their data including clicks, conversions, and payout history. This cannot be undone.</p>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => setDeleteConfirm(null)} style={{ flex: 1, padding: "11px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => setDeleteConfirm({ ...deleteConfirm, step: 2 })} style={{ flex: 1, padding: "11px 0", background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 600 }}>Continue</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ color: THEME.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Type the name to confirm</div>
+                  <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Type <strong style={{ color: THEME.text }}>{deleteConfirm.name}</strong> to permanently delete this affiliate and all related data.</p>
+                  <input type="text" value={deleteConfirmName} onChange={e => setDeleteConfirmName(e.target.value)} placeholder="Affiliate name" autoFocus
+                    style={{ width: "100%", padding: "10px 14px", border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, outline: "none" }} />
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => { setDeleteConfirm({ ...deleteConfirm, step: 1 }); setDeleteConfirmName(""); }} style={{ flex: 1, padding: "11px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Back</button>
+                  <button disabled={deleteConfirmName.trim() !== deleteConfirm.name} onClick={async () => {
+                    if (deleteConfirmName.trim() !== deleteConfirm.name) return;
+                    try {
+                      const res = await fetch("/api/affiliates/" + deleteConfirm.id, { method: "DELETE" });
+                      if (res.ok) {
+                        fetchAffiliates();
+                        setDeleteConfirm(null);
+                        setDeleteConfirmName("");
+                        setSuccessToast("Affiliate deleted successfully");
+                        setTimeout(() => setSuccessToast(null), 4000);
+                      }
+                    } catch { /* ignore */ }
+                  }} style={{ flex: 1, padding: "11px 0", background: "#dc2626", border: "none", borderRadius: 8, color: "#fff", cursor: deleteConfirmName.trim() !== deleteConfirm.name ? "not-allowed" : "pointer", fontWeight: 600, opacity: deleteConfirmName.trim() === deleteConfirm.name ? 1 : 0.7 }}>Delete permanently</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Success toast */}
+      {successToast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: THEME.success, color: "#fff", padding: "12px 24px", borderRadius: 10, fontSize: 14, fontWeight: 600, zIndex: 10001, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+          {successToast}
         </div>
       )}
 

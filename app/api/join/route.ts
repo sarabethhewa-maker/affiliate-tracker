@@ -10,7 +10,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Name and email required' }, { status: 400 });
   }
 
-  const existing = await prisma.affiliate.findUnique({ where: { email: email.trim().toLowerCase() } });
+  const existing = await prisma.affiliate.findFirst({
+    where: { email: email.trim().toLowerCase(), deletedAt: null },
+  });
   if (existing) {
     return NextResponse.json({ error: 'An affiliate with this email already exists' }, { status: 409 });
   }
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
   const code = (refCode ?? '').toString().trim().toUpperCase();
   if (code) {
     const referrer = await prisma.affiliate.findFirst({
-      where: { referralCode: code, status: 'active' },
+      where: { referralCode: code, status: 'active', deletedAt: null, archivedAt: null },
     });
     if (referrer) parentId = referrer.id;
   }

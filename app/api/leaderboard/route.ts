@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const affiliates = await prisma.affiliate.findMany({
-    where: { status: 'active' },
+    where: { status: 'active', deletedAt: null, archivedAt: null },
     include: { conversions: true, children: true },
   });
 
@@ -76,8 +76,8 @@ export async function GET(req: NextRequest) {
     recruitsCount: r.recruitsCount,
   }));
 
-  const me = await prisma.affiliate.findUnique({
-    where: { email: email.trim().toLowerCase() },
+  const me = await prisma.affiliate.findFirst({
+    where: { email: email.trim().toLowerCase(), deletedAt: null },
   });
   let myRank: LeaderboardEntry | null = null;
   if (me) {

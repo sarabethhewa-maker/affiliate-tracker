@@ -25,8 +25,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'You must agree to the affiliate terms and conditions' }, { status: 400 });
   }
 
-  const existing = await prisma.affiliate.findUnique({
-    where: { email: String(email).trim().toLowerCase() },
+  const existing = await prisma.affiliate.findFirst({
+    where: { email: String(email).trim().toLowerCase(), deletedAt: null },
   });
   if (existing) {
     return NextResponse.json({ error: 'An affiliate with this email already exists' }, { status: 409 });
@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     const referrer = await prisma.affiliate.findFirst({
       where: {
         status: 'active',
+        deletedAt: null,
+        archivedAt: null,
         OR: [
           { referralCode: code.toUpperCase() },
           { id: code },

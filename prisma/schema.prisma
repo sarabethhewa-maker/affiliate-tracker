@@ -26,6 +26,8 @@ model Affiliate {
   tipaltiPayeeId   String?   // Tipalti idap (we use affiliate id as idap)
   tipaltiStatus    String?   // pending | active | blocked
   notes            String?   // private admin notes, never shown to affiliate
+  archivedAt       DateTime? // null = active; set when archived (hidden from list, no new commissions)
+  deletedAt        DateTime? // null = not deleted; set when soft-deleted (excluded from all queries)
   parent           Affiliate?   @relation("AffiliateTree", fields: [parentId], references: [id])
   children         Affiliate[]  @relation("AffiliateTree")
   clicks           Click[]
@@ -37,7 +39,7 @@ model Affiliate {
 model Click {
   id          String    @id @default(cuid())
   affiliateId String
-  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   ip          String?
   userAgent   String?
   createdAt   DateTime  @default(now())
@@ -46,7 +48,7 @@ model Click {
 model Conversion {
   id            String    @id @default(cuid())
   affiliateId   String
-  affiliate     Affiliate @relation(fields: [affiliateId], references: [id])
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   amount        Float
   status        String    @default("pending") // pending | approved | paid
   product       String?
@@ -65,7 +67,7 @@ model Conversion {
 model Payout {
   id              String    @id @default(cuid())
   affiliateId     String
-  affiliate       Affiliate @relation(fields: [affiliateId], references: [id])
+  affiliate       Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
   amount          Float
   method          String    @default("other") // paypal | venmo_zelle | ach | tipalti | other
   note            String?

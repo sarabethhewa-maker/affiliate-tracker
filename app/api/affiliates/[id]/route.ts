@@ -121,3 +121,26 @@ export async function PATCH(
   });
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const err = await requireAdmin();
+  if (err) return err;
+
+  const id = (await params).id;
+  const aff = await prisma.affiliate.findUnique({
+    where: { id },
+    select: { id: true, name: true },
+  });
+  if (!aff) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.alert.deleteMany({ where: { affiliateId: id } });
+    await tx.activityLog.updateMany({ where: { affiliateId: id }, data: { affiliateId: null } });
+    await tx.affiliate.delete({ where: { id } });
+  });
+
+  return NextResponse.json({ ok: true, deleted: aff.name });
+}

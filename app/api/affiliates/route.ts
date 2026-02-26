@@ -3,12 +3,19 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const err = await requireAdmin();
     if (err) return err;
 
+    const url = new URL(req.url);
+    const showArchived = url.searchParams.get('showArchived') === 'true';
+
     const affiliates = await prisma.affiliate.findMany({
+      where: {
+        deletedAt: null,
+        ...(showArchived ? {} : { archivedAt: null }),
+      },
       include: { clicks: true, conversions: true, children: true, payouts: true },
       orderBy: { createdAt: 'desc' },
     });

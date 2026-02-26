@@ -134,16 +134,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'Status ignored' });
     }
 
+    const activeWhere = { deletedAt: null, archivedAt: null };
     let affiliate =
       affiliateRef != null && affiliateRef !== ''
-        ? (await prisma.affiliate.findUnique({ where: { id: affiliateRef } })) ??
-          (await prisma.affiliate.findUnique({ where: { slug: affiliateRef } }))
+        ? (await prisma.affiliate.findFirst({ where: { id: affiliateRef, ...activeWhere } })) ??
+          (await prisma.affiliate.findFirst({ where: { slug: affiliateRef, ...activeWhere } }))
         : null;
 
     if (!affiliate && couponCodes.length > 0) {
       for (const code of couponCodes) {
         const byCoupon = await prisma.affiliate.findFirst({
-          where: { couponCode: { equals: code, mode: 'insensitive' } },
+          where: { couponCode: { equals: code, mode: 'insensitive' }, ...activeWhere },
         });
         if (byCoupon) {
           affiliate = byCoupon;

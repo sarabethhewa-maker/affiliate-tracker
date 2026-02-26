@@ -14,6 +14,7 @@ export async function GET() {
   if (err) return err;
 
   const affiliates = await prisma.affiliate.findMany({
+    where: { deletedAt: null },
     include: { clicks: true, conversions: true },
     orderBy: { createdAt: 'desc' },
   });

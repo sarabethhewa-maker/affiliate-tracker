@@ -13,32 +13,38 @@ export async function GET(
   const affiliateId = (await params).id;
   const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? '';
 
-  try {
-    await prisma.click.create({
-      data: {
-        affiliateId,
-        ip: ip.slice(0, 255),
-        userAgent: req.headers.get('user-agent') ?? '',
-      },
-    });
-    const alert = await checkClickAnomaly(affiliateId, ip);
-    if (alert) {
-      const aff = await prisma.affiliate.findUnique({ where: { id: affiliateId }, select: { name: true } });
-      sendAlertEmail(aff?.name ?? 'Unknown', alert.message).catch(() => {});
+  const aff = await prisma.affiliate.findFirst({
+    where: { id: affiliateId, deletedAt: null, archivedAt: null },
+    select: { id: true, name: true },
+  });
+
+  if (aff) {
+    try {
+      await prisma.click.create({
+        data: {
+          affiliateId: aff.id,
+          ip: ip.slice(0, 255),
+          userAgent: req.headers.get('user-agent') ?? '',
+        },
+      });
+      const alert = await checkClickAnomaly(aff.id, ip);
+      if (alert) sendAlertEmail(aff.name ?? 'Unknown', alert.message).catch(() => {});
+    } catch {
+      // ignore click creation errors
     }
-  } catch {
-    // affiliate not found, still redirect
   }
 
-  const expires = new Date();
-  expires.setDate(expires.getDate() + COOKIE_DAYS);
   const response = NextResponse.redirect(REDIRECT_URL);
-  response.cookies.set('ref', affiliateId, {
-    expires,
-    sameSite: 'none',
-    secure: true,
-    path: '/',
-    httpOnly: false, // so WooCommerce/checkout can read it
-  });
+  if (aff) {
+    const expires = new Date();
+    expires.setDate(expires.getDate() + COOKIE_DAYS);
+    response.cookies.set('ref', aff.id, {
+      expires,
+      sameSite: 'none',
+      secure: true,
+      path: '/',
+      httpOnly: false,
+    });
+  }
   return response;
 }

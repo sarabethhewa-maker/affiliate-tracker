@@ -203,6 +203,7 @@ export async function recalculateTiers(): Promise<void> {
   const month = now.getMonth();
 
   const affiliates = await prisma.affiliate.findMany({
+    where: { deletedAt: null },
     include: { conversions: true },
   });
 

@@ -272,7 +272,7 @@ export async function syncAllAffiliates(): Promise<{ synced: number; error?: str
   }
 
   const affiliates = await prisma.affiliate.findMany({
-    where: { status: 'active' },
+    where: { status: 'active', deletedAt: null, archivedAt: null },
     select: { id: true, name: true, email: true, tier: true },
   });
 

@@ -59,12 +59,13 @@ export async function GET(req: NextRequest) {
   const newAffiliates = await prisma.affiliate.findMany({
     where: {
       createdAt: { gte: thisWeek.start, lte: thisWeek.end },
+      deletedAt: null,
     },
     select: { name: true, email: true },
   });
 
   const affiliates = await prisma.affiliate.findMany({
-    where: { status: 'active' },
+    where: { status: 'active', deletedAt: null, archivedAt: null },
     include: { conversions: true, children: { include: { conversions: true } } },
   });
 

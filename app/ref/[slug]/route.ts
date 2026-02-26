@@ -15,8 +15,8 @@ export async function GET(
     return NextResponse.redirect(REDIRECT_URL);
   }
 
-  const affiliate = await prisma.affiliate.findUnique({
-    where: { slug },
+  const affiliate = await prisma.affiliate.findFirst({
+    where: { slug, deletedAt: null, archivedAt: null },
     select: { id: true, name: true },
   });
 

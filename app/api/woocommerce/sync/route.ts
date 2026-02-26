@@ -58,7 +58,9 @@ export async function POST() {
     const affiliateId = getAffiliateIdFromMetaData(order.meta_data);
     if (!affiliateId) continue;
 
-    const affiliate = await prisma.affiliate.findUnique({ where: { id: affiliateId } });
+    const affiliate = await prisma.affiliate.findFirst({
+      where: { id: affiliateId, deletedAt: null, archivedAt: null },
+    });
     if (!affiliate) continue;
 
     const amount = Number(order.total) || 0;
