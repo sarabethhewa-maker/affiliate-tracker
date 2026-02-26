@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendAffiliateWelcome } from '@/lib/email';
 import { isValidSlug, sanitizeSlug } from '@/lib/slug';
+import { normalizeInstagram, normalizeTiktok, normalizeYoutube, normalizeWebsite } from '@/lib/socialUrls';
 
 const AFFILIATE_INCLUDE = {
   clicks: true,
@@ -111,6 +112,17 @@ export async function PATCH(
     return NextResponse.json(updated);
   }
 
+  // manual tier override: null = auto, "0"|"1"|"2" = silver|gold|master
+  if (body.manualTierOverride !== undefined) {
+    const override = body.manualTierOverride === null || body.manualTierOverride === '' ? null : String(body.manualTierOverride);
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: { manualTierOverride: override },
+      include: AFFILIATE_INCLUDE,
+    });
+    return NextResponse.json(updated);
+  }
+
   // contact & social fields
   const contactData: {
     email?: string;
@@ -133,10 +145,10 @@ export async function PATCH(
   }
   if (body.phone !== undefined) contactData.phone = typeof body.phone === 'string' ? body.phone.trim() || null : null;
   if (body.mailingAddress !== undefined) contactData.mailingAddress = typeof body.mailingAddress === 'string' ? body.mailingAddress.trim() || null : null;
-  if (body.instagramUrl !== undefined) contactData.instagramUrl = typeof body.instagramUrl === 'string' ? body.instagramUrl.trim() || null : null;
-  if (body.tiktokUrl !== undefined) contactData.tiktokUrl = typeof body.tiktokUrl === 'string' ? body.tiktokUrl.trim() || null : null;
-  if (body.youtubeUrl !== undefined) contactData.youtubeUrl = typeof body.youtubeUrl === 'string' ? body.youtubeUrl.trim() || null : null;
-  if (body.websiteUrl !== undefined) contactData.websiteUrl = typeof body.websiteUrl === 'string' ? body.websiteUrl.trim() || null : null;
+  if (body.instagramUrl !== undefined) contactData.instagramUrl = typeof body.instagramUrl === 'string' ? normalizeInstagram(body.instagramUrl) : null;
+  if (body.tiktokUrl !== undefined) contactData.tiktokUrl = typeof body.tiktokUrl === 'string' ? normalizeTiktok(body.tiktokUrl) : null;
+  if (body.youtubeUrl !== undefined) contactData.youtubeUrl = typeof body.youtubeUrl === 'string' ? normalizeYoutube(body.youtubeUrl) : null;
+  if (body.websiteUrl !== undefined) contactData.websiteUrl = typeof body.websiteUrl === 'string' ? normalizeWebsite(body.websiteUrl) : null;
   if (body.state !== undefined) contactData.state = body.state;
   if (body.notes !== undefined) contactData.notes = body.notes;
 

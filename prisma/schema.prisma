@@ -16,6 +16,7 @@ model Affiliate {
   couponCode       String?   // WooCommerce coupon e.g. SARABETH15 — credit via link OR coupon
   storeCredit      Float     @default(0) // balance for use on store (admin can add)
   tier             String    @default("silver")
+  manualTierOverride String? // "0"|"1"|"2" = silver|gold|master; null = auto from revenue
   status           String    @default("active") // active | pending | rejected
   state            String?
   referralCode     String?   @unique

@@ -7,6 +7,7 @@ import Tooltip from "../components/Tooltip";
 import ImportAffiliatesTab from "@/app/(admin)/ImportAffiliatesTab";
 import MessageTemplatesTab from "@/app/(admin)/MessageTemplatesTab";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
+import { displayInstagram, displayTiktok, displayYoutube, displayWebsite } from "@/lib/socialUrls";
 
 function getCurrentMonthRevenue(conversions: { amount: number; createdAt: string }[]): number {
   const now = new Date();
@@ -59,6 +60,7 @@ type Affiliate = {
   email: string;
   slug?: string | null;
   tier: string;
+  manualTierOverride?: string | null;
   status: string;
   state?: string | null;
   referralCode?: string | null;
@@ -401,6 +403,7 @@ export default function Page() {
   const [fraudResolveSaving, setFraudResolveSaving] = useState(false);
   const [fraudScanning, setFraudScanning] = useState(false);
   const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [topProducts, setTopProducts] = useState<{ productName: string; unitsSold: number; revenue: number; uniqueAffiliates: number }[]>([]);
   const [topProductsLoading, setTopProductsLoading] = useState(false);
 
@@ -1405,6 +1408,7 @@ export default function Page() {
                   const rev = aff.conversions.reduce((s, c) => s + c.amount, 0);
                   const monthlyRev = getCurrentMonthRevenue(aff.conversions);
                   const vol = getVolumeTier(monthlyRev);
+                  const displayTierKey = aff.manualTierOverride ?? vol.tierKey;
                   const origin = typeof window !== "undefined" ? window.location.origin : "";
                   const salesLink = aff.slug ? `${origin}/ref/${aff.slug}` : `${origin}/api/ref/${aff.id}`;
                   const legacyLink = `${origin}/api/ref/${aff.id}`;
@@ -1413,332 +1417,239 @@ export default function Page() {
                   const parentVol = parent ? getVolumeTier(getCurrentMonthRevenue(parent.conversions)) : null;
                   const referrerPct = parentVol ? (TIERS[parentVol.tierKey]?.mlm2 ?? 3) : 0;
                   const referralRevenue = affiliates.filter(c => c.parentId === aff.id).reduce((s, c) => s + c.conversions.reduce((x, cv) => x + cv.amount, 0), 0);
-                  const myEarnFromReferrals = referralRevenue * (TIERS[vol.tierKey]?.mlm2 ?? 3) / 100;
+                  const myEarnFromReferrals = referralRevenue * (TIERS[displayTierKey]?.mlm2 ?? 3) / 100;
                   const isArchived = !!aff.archivedAt;
+                  const isExpanded = expandedCardId === aff.id;
                   return (
-                    <div key={aff.id} style={{ background: highlightedAffiliateId === aff.id ? "#e0f2fe" : THEME.card, border: `2px solid ${highlightedAffiliateId === aff.id ? THEME.accentLight : THEME.border}`, borderRadius: 10, padding: "16px 20px", transition: "border 0.2s, background 0.2s", opacity: isArchived ? 0.92 : 1 }}>
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" as const }}>
-                        <label style={{ display: "flex", alignItems: "center", cursor: "pointer", flexShrink: 0 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedAffiliateIds.has(aff.id)}
-                            onChange={(e) => {
-                              const next = new Set(selectedAffiliateIds);
-                              if (e.target.checked) next.add(aff.id);
-                              else next.delete(aff.id);
-                              setSelectedAffiliateIds(next);
-                            }}
-                            style={{ accentColor: THEME.accent, width: 18, height: 18 }}
-                          />
+                    <div key={aff.id} style={{ background: highlightedAffiliateId === aff.id ? "#e0f2fe" : THEME.card, border: `2px solid ${highlightedAffiliateId === aff.id ? THEME.accentLight : THEME.border}`, borderRadius: 10, padding: "12px 16px", transition: "border 0.2s, background 0.2s", opacity: isArchived ? 0.92 : 1 }}>
+                      {/* Row 1: Header — compact horizontal, click to expand/collapse */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { if (!(e.target as HTMLElement).closest("button") && !(e.target as HTMLElement).closest("input") && !(e.target as HTMLElement).closest("a") && !(e.target as HTMLElement).closest("label")) setExpandedCardId(isExpanded ? null : aff.id); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedCardId(isExpanded ? null : aff.id); } }}
+                        style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", cursor: "pointer", minHeight: 44 }}
+                      >
+                        <label onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", cursor: "pointer", flexShrink: 0 }}>
+                          <input type="checkbox" checked={selectedAffiliateIds.has(aff.id)} onChange={(e) => { const next = new Set(selectedAffiliateIds); if (e.target.checked) next.add(aff.id); else next.delete(aff.id); setSelectedAffiliateIds(next); }} style={{ accentColor: THEME.accent, width: 18, height: 18 }} />
                         </label>
-                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: TIERS[vol.tierKey]?.bg, border: `2px solid ${TIERS[vol.tierKey]?.color}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: TIERS[vol.tierKey]?.color, flexShrink: 0 }}>{aff.name.charAt(0)}</div>
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" as const }}>
-                            <span style={{ color: THEME.text, fontWeight: 700, fontSize: 14 }}>{aff.name}</span>
-                            {(aff.fraudFlags?.filter((f: { resolved: boolean }) => !f.resolved).length ?? 0) > 0 && <span title="Unresolved fraud flags" style={{ fontSize: 14 }}>⚠️</span>}
-                            {isArchived && <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>ARCHIVED</span>}
-                            <TierBadge tier={vol.tierKey} TIERS={TIERS} />
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: TIERS[displayTierKey]?.bg, border: `2px solid ${TIERS[displayTierKey]?.color}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: TIERS[displayTierKey]?.color, flexShrink: 0 }}>{aff.name.charAt(0)}</div>
+                        <div style={{ flex: 1, minWidth: 140 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                            <span style={{ color: THEME.text, fontWeight: 700, fontSize: 13 }}>{aff.name}</span>
+                            {(aff.fraudFlags?.filter((f: { resolved: boolean }) => !f.resolved).length ?? 0) > 0 && <span title="Unresolved fraud flags" style={{ fontSize: 12 }}>⚠️</span>}
+                            {isArchived && <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960", borderRadius: 4, padding: "2px 6px", fontSize: 9, fontWeight: 700 }}>ARCHIVED</span>}
+                            <TierBadge tier={displayTierKey} TIERS={TIERS} />
+                            {aff.manualTierOverride != null && <span style={{ color: "#b45309", fontSize: 10, fontWeight: 600 }}>Manually set</span>}
                             {aff.status !== "active" && <StatusBadge status={aff.status} />}
-                            {aff.state && <span style={{ color: THEME.textMuted, fontSize: 11 }}>{aff.state}</span>}
+                            {aff.state && <span style={{ color: THEME.textMuted, fontSize: 10 }}>{aff.state}</span>}
                           </div>
-                          <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 2 }}>
-                            {aff.email}
-                            {aff.phone ? ` · ${aff.phone}` : ""}
-                            {" · Joined "}
-                            {new Date(aff.joinedAt || aff.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                          <div style={{ color: THEME.textMuted, fontSize: 11 }}>
+                            {aff.email}{aff.phone ? ` · ${aff.phone}` : ""} · Joined {new Date(aff.joinedAt || aff.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
-                            <span style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace" }}>Sales: {salesLink}</span>
-                            <button type="button" onClick={() => { setSlugModal({ affId: aff.id, name: aff.name, currentSlug: aff.slug ?? "" }); setSlugModalValue(aff.slug ?? ""); setSlugModalAvailable(null); }} title="Edit link slug" style={{ padding: "2px 8px", fontSize: 11, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit slug</button>
-                          </div>
-                          {aff.slug && <div style={{ color: THEME.textMuted, fontSize: 10, marginBottom: 2 }}>Legacy: {legacyLink} — Old link still works</div>}
-                          {recruitLink && <div style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace", marginBottom: 4 }}>Recruit: {recruitLink}</div>}
-                          <div style={{ marginBottom: 8, fontSize: 12 }}>
-                            <span style={{ color: THEME.textMuted, marginRight: 6 }}>Coupon code:</span>
-                            {editingCouponId !== aff.id ? (
-                              <>
-                                <span style={{ color: THEME.text, fontFamily: "monospace", fontWeight: 600 }}>{aff.couponCode || "—"}</span>
-                                <button type="button" onClick={() => { setEditingCouponId(aff.id); setCouponEditValue(aff.couponCode ?? ""); }} style={{ marginLeft: 8, padding: "2px 8px", fontSize: 10, background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit</button>
-                              </>
-                            ) : (
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <input
-                                  value={couponEditValue}
-                                  onChange={(e) => setCouponEditValue(e.target.value.trim().toUpperCase().slice(0, 32))}
-                                  placeholder="e.g. SARABETH15"
-                                  style={{ width: 140, padding: "4px 8px", fontSize: 12, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 4 }}
-                                />
-                                <button type="button" disabled={couponSaving} onClick={async () => {
-                                  setCouponSaving(true);
-                                  try {
-                                    await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ couponCode: couponEditValue.trim() || null }) });
-                                    fetchAffiliates();
-                                    setEditingCouponId(null);
-                                    setCouponEditValue("");
-                                  } finally { setCouponSaving(false); }
-                                }} style={{ padding: "4px 10px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: couponSaving ? "not-allowed" : "pointer" }}>{couponSaving ? "…" : "Save"}</button>
-                                <button type="button" onClick={() => { setEditingCouponId(null); setCouponEditValue(""); }} style={{ padding: "4px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
-                              </span>
-                            )}
-                          </div>
-                          {/* Contact Info */}
-                          <div style={{ marginTop: 12, padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
-                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Contact Info</div>
-                            {(["email", "phone", "mailingAddress"] as const).map((field) => {
-                              const label = field === "email" ? "Email" : field === "phone" ? "Phone" : "Mailing address";
-                              const val = field === "email" ? aff.email : field === "phone" ? aff.phone : aff.mailingAddress;
-                              const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === field;
-                              return (
-                                <div key={field} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-                                  <span style={{ color: THEME.textMuted, fontSize: 12, minWidth: 100 }}>{label}:</span>
-                                  {isEditing ? (
-                                    <>
-                                      <input
-                                        type={field === "email" ? "email" : "text"}
-                                        value={inlineEditValue}
-                                        onChange={(e) => setInlineEditValue(e.target.value)}
-                                        style={{ flex: 1, minWidth: 180, padding: "6px 10px", fontSize: 12, border: `1px solid ${THEME.border}`, borderRadius: 6 }}
-                                        placeholder={field === "mailingAddress" ? "Street, city, state, zip" : ""}
-                                      />
-                                      <button type="button" disabled={inlineSaving} onClick={async () => {
-                                        setInlineSaving(true);
-                                        try {
-                                          const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: inlineEditValue }) });
-                                          if (!res.ok) throw new Error((await res.json()).error || "Failed");
-                                          fetchAffiliates();
-                                          setInlineEdit(null);
-                                          setSuccessToast("Saved");
-                                          setTimeout(() => setSuccessToast(null), 2000);
-                                        } catch {
-                                          setSuccessToast("Failed to save");
-                                          setTimeout(() => setSuccessToast(null), 2000);
-                                        } finally { setInlineSaving(false); }
-                                      }} style={{ padding: "4px 10px", fontSize: 11, background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, cursor: inlineSaving ? "not-allowed" : "pointer" }}>{inlineSaving ? "…" : "Save"}</button>
-                                      <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "4px 10px", fontSize: 11, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 6, cursor: "pointer" }}>Cancel</button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span style={{ color: val ? THEME.text : "#9ca3af", fontSize: 12 }}>{val || "Not provided"}</span>
-                                      <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field }); setInlineEditValue(val ?? ""); }} style={{ padding: "2px 6px", fontSize: 10, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{val ? "Edit" : "Add"}</button>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {/* Social Media */}
-                          <div style={{ marginTop: 12, padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
-                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Social Media</div>
-                            {[
-                              { key: "instagramUrl" as const, label: "Instagram", icon: "📷", href: aff.instagramUrl },
-                              { key: "tiktokUrl" as const, label: "TikTok", icon: "🎵", href: aff.tiktokUrl },
-                              { key: "youtubeUrl" as const, label: "YouTube", icon: "▶️", href: aff.youtubeUrl },
-                              { key: "websiteUrl" as const, label: "Website", icon: "🌐", href: aff.websiteUrl },
-                            ].map(({ key, label, icon, href }) => {
-                              const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === key;
-                              return (
-                                <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-                                  <span style={{ color: THEME.textMuted, fontSize: 12, minWidth: 80 }}>{icon} {label}:</span>
-                                  {isEditing ? (
-                                    <>
-                                      <input type="url" value={inlineEditValue} onChange={(e) => setInlineEditValue(e.target.value)} placeholder="https://..." style={{ flex: 1, minWidth: 200, padding: "6px 10px", fontSize: 12, border: `1px solid ${THEME.border}`, borderRadius: 6 }} />
-                                      <button type="button" disabled={inlineSaving} onClick={async () => {
-                                        setInlineSaving(true);
-                                        try {
-                                          const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: inlineEditValue }) });
-                                          if (!res.ok) throw new Error((await res.json()).error || "Failed");
-                                          fetchAffiliates();
-                                          setInlineEdit(null);
-                                          setSuccessToast("Saved");
-                                          setTimeout(() => setSuccessToast(null), 2000);
-                                        } catch {
-                                          setSuccessToast("Failed to save");
-                                          setTimeout(() => setSuccessToast(null), 2000);
-                                        } finally { setInlineSaving(false); }
-                                        }} style={{ padding: "4px 10px", fontSize: 11, background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, cursor: inlineSaving ? "not-allowed" : "pointer" }}>{inlineSaving ? "…" : "Save"}</button>
-                                      <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "4px 10px", fontSize: 11, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 6, cursor: "pointer" }}>Cancel</button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      {href ? (
-                                        <a href={href.startsWith("http") ? href : "https://" + href} target="_blank" rel="noopener noreferrer" style={{ color: "#1a4a8a", fontSize: 12 }}>{href}</a>
-                                      ) : (
-                                        <span style={{ color: "#9ca3af", fontSize: 12 }}>Not provided</span>
-                                      )}
-                                      <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field: key }); setInlineEditValue(href ?? ""); }} style={{ padding: "2px 6px", fontSize: 10, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{href ? "Edit" : "Add"}</button>
-                                    </>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {aff.socialHandle && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                                <span style={{ color: THEME.textMuted, fontSize: 12 }}>Handle:</span>
-                                <span style={{ color: THEME.text, fontSize: 12 }}>{aff.socialHandle}</span>
-                              </div>
-                            )}
-                          </div>
-                          <VolumeProgressBar monthlyRevenue={monthlyRev} nextThreshold={vol.nextThreshold} progress={vol.progress} />
-                          {parent && (
-                            <div style={{ color: THEME.textMuted, fontSize: 11, marginTop: 4 }}>
-                              Referred by <span style={{ color: THEME.text, fontWeight: 600 }}>{parent.name}</span> — they earn <span style={{ color: THEME.success, fontWeight: 700 }}>{referrerPct}%</span> of this affiliate&apos;s sales {rev > 0 ? `($${(rev * referrerPct / 100).toFixed(2)})` : ""}
-                            </div>
-                          )}
-                          {aff.children?.length > 0 && (
-                            <div style={{ color: THEME.textMuted, fontSize: 11, marginTop: 2 }}>
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                Signed up {aff.children.length} referral{aff.children.length !== 1 ? "s" : ""} — you earn {(TIERS[vol.tierKey]?.mlm2 ?? 3)}% of their sales = <span style={{ color: THEME.warning, fontFamily: "monospace" }}>${myEarnFromReferrals.toFixed(2)}</span>
-                                <Tooltip text="When someone this affiliate recruited makes a sale, this affiliate earns a bonus override commission." />
-                              </span>
-                            </div>
-                          )}
-                          <div style={{ marginTop: 12 }}>
-                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                              {aff.notes ? "📝" : "✏️"} Private notes
-                            </div>
-                            <textarea
-                              key={`notes-${aff.id}-${(aff.notes ?? "").slice(0, 20)}`}
-                              placeholder="e.g. Met at conference, referred by Bobby..."
-                              defaultValue={aff.notes ?? ""}
-                              onBlur={(e) => {
-                                const v = e.target.value.trim();
-                                if (v !== (aff.notes ?? "")) saveNotes(aff.id, v);
-                              }}
-                              style={{ width: "100%", minHeight: 60, padding: "8px 10px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 6, fontSize: 12, color: THEME.text, outline: "none", resize: "vertical" }}
-                            />
-                            {savingNotesId === aff.id && <span style={{ fontSize: 11, color: THEME.textMuted }}>Saving…</span>}
-                          </div>
-                          {(() => {
-                            const appFields = { phone: aff.phone, socialHandle: aff.socialHandle, marketingChannel: (aff as { marketingChannel?: string }).marketingChannel, audienceSize: (aff as { audienceSize?: string }).audienceSize, howDidYouHear: aff.howDidYouHear, whyJoin: (aff as { whyJoin?: string }).whyJoin, websiteUrl: aff.websiteUrl };
-                            const hasAny = Object.values(appFields).some(v => v != null && String(v).trim() !== "");
-                            if (!hasAny) return null;
-                            const expanded = expandedApplicationId === aff.id;
-                            return (
-                              <div style={{ marginTop: 12, border: `1px solid ${THEME.border}`, borderRadius: 8, overflow: "hidden", fontSize: 12 }}>
-                                <button type="button" onClick={() => setExpandedApplicationId(expanded ? null : aff.id)} style={{ width: "100%", padding: "10px 12px", background: THEME.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", color: THEME.text, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1 }}>
-                                  <span>Application Details</span>
-                                  <span style={{ fontSize: 14 }}>{expanded ? "▼" : "▶"}</span>
-                                </button>
-                                {expanded && (
-                                  <div style={{ padding: "10px 12px", borderTop: `1px solid ${THEME.border}`, background: THEME.card }}>
-                                    {appFields.phone && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Phone</span><br /><span style={{ color: THEME.text }}>{appFields.phone}</span></div>}
-                                    {appFields.socialHandle && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Social handle</span><br /><span style={{ color: THEME.text }}>{appFields.socialHandle}</span></div>}
-                                    {appFields.marketingChannel && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Marketing channel</span><br /><span style={{ color: THEME.text }}>{appFields.marketingChannel}</span></div>}
-                                    {appFields.audienceSize && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Audience size</span><br /><span style={{ color: THEME.text }}>{appFields.audienceSize}</span></div>}
-                                    {appFields.howDidYouHear && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>How did you hear about us</span><br /><span style={{ color: THEME.text }}>{appFields.howDidYouHear}</span></div>}
-                                    {appFields.whyJoin && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Why join</span><br /><span style={{ color: THEME.text }}>{appFields.whyJoin}</span></div>}
-                                    {appFields.websiteUrl && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Website / URL</span><br /><a href={appFields.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: THEME.accent }}>{appFields.websiteUrl}</a></div>}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
-                          <div style={{ marginTop: 12, padding: 10, background: THEME.bg, borderRadius: 8, fontSize: 12 }}>
-                            <div style={{ color: THEME.textMuted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 1 }}>Payout Setup</div>
-                            {!aff.tipaltiPayeeId && (
-                              <button
-                                disabled={!!tipaltiInviting}
-                                onClick={async () => {
-                                  setTipaltiInviting(aff.id);
-                                  try {
-                                    await fetch("/api/affiliates/" + aff.id + "/tipalti-invite", { method: "POST" });
-                                    fetchAffiliates();
-                                  } finally { setTipaltiInviting(null); }
-                                }}
-                                style={{ padding: "6px 12px", background: THEME.accentLight, color: "#fff", border: "none", borderRadius: 6, cursor: tipaltiInviting ? "not-allowed" : "pointer", fontSize: 11 }}
-                              >
-                                {tipaltiInviting === aff.id ? "Sending…" : "Invite to Tipalti"}
-                              </button>
-                            )}
-                            {aff.tipaltiStatus === "pending" && (
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>Awaiting bank details</span>
-                                <button
-                                  disabled={!!tipaltiRefreshing}
-                                  onClick={async () => {
-                                    setTipaltiRefreshing(aff.id);
-                                    try {
-                                      await fetch("/api/affiliates/" + aff.id + "/tipalti-status");
-                                      fetchAffiliates();
-                                    } finally { setTipaltiRefreshing(null); }
-                                    }
-                                  }
-                                  style={{ padding: "2px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: tipaltiRefreshing ? "not-allowed" : "pointer" }}
-                                >
-                                  {tipaltiRefreshing === aff.id ? "…" : "Refresh"}
-                                </button>
-                              </span>
-                            )}
-                            {aff.tipaltiStatus === "active" && (
-                              <span style={{ background: "#dcfce7", color: THEME.success, border: "1px solid #0d7a3d60", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>Ready to pay</span>
-                            )}
-                            {aff.tipaltiStatus === "blocked" && (
-                              <span style={{ background: "#fee2e2", color: THEME.error, border: "1px solid #b91c1c60", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>Blocked</span>
-                            )}
-                          </div>
-                          {(aff.fraudFlags?.length ?? 0) > 0 && (
-                            <div style={{ marginTop: 12, padding: 10, background: "#fef3c7", border: "1px solid #b4530960", borderRadius: 8, fontSize: 12 }}>
-                              <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Fraud flags</div>
-                              {(aff.fraudFlags ?? []).map((f: { id: string; type: string; description: string; severity: string; resolved: boolean; resolvedNote?: string | null; createdAt: string }) => {
-                                const sevStyle = f.severity === "high" ? { background: "#fee2e2", color: "#b91c1c" } : f.severity === "medium" ? { background: "#fef3c7", color: "#b45309" } : { background: "#f1f5f9", color: "#4a5568" };
-                                return (
-                                  <div key={f.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(180,83,9,0.2)" }}>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 6 }}>
-                                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 6px", borderRadius: 4, ...sevStyle, marginRight: 8 }}>{f.type}</span>
-                                      <span>
-                                        {f.resolved ? <span style={{ fontSize: 11, color: THEME.success }}>Resolved</span> : (
-                                          <button type="button" onClick={() => { setFraudResolveModal({ id: f.id, affiliateName: aff.name }); setFraudResolveNote(""); }} style={{ padding: "4px 8px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Resolve</button>
-                                        )}
-                                      </span>
-                                    </div>
-                                    <div style={{ color: THEME.text, marginTop: 2 }}>{f.description}</div>
-                                    <div style={{ fontSize: 11, color: THEME.textMuted }}>{new Date(f.createdAt).toLocaleDateString()}{f.resolvedNote ? ` · ${f.resolvedNote}` : ""}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {(aff.importSource || (aff.historicalRevenue != null && aff.historicalRevenue > 0) || (aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0)) && (
-                            <div style={{ marginTop: 12, padding: 12, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12 }}>
-                              <div style={{ fontWeight: 700, color: THEME.text, marginBottom: 8 }}>Historical Data (Pre-Import)</div>
-                              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", color: THEME.textMuted }}>
-                                {aff.historicalGrossConversions != null && aff.historicalGrossConversions > 0 && <><span>Gross Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalGrossConversions}</span></>}
-                                {aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0 && <><span>Approved Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalApprovedConversions}</span></>}
-                                {aff.historicalRejectedConversions != null && aff.historicalRejectedConversions > 0 && <><span>Rejected Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalRejectedConversions}</span></>}
-                                {aff.historicalPendingConversions != null && aff.historicalPendingConversions > 0 && <><span>Pending Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalPendingConversions}</span></>}
-                                {aff.historicalRevenue != null && aff.historicalRevenue > 0 && <><span>Total Revenue:</span><span style={{ color: THEME.text }}>${aff.historicalRevenue.toLocaleString()}</span></>}
-                                {aff.historicalPayout != null && aff.historicalPayout > 0 && <><span>Total Payout:</span><span style={{ color: THEME.text }}>${aff.historicalPayout.toLocaleString()}</span></>}
-                                {aff.importSource && <><span>Import Source:</span><span style={{ color: THEME.text }}>{aff.importSource === "csv-import" ? "CSV Import" : aff.importSource}</span></>}
-                              </div>
-                            </div>
-                          )}
                         </div>
-                        <div style={{ display: "flex", gap: 20, textAlign: "center" as const }}>
+                        <div style={{ display: "flex", gap: 16, textAlign: "center" as const, flexShrink: 0 }}>
                           {[["Clicks", aff.clicks.length, THEME.accentLight], ["Sales", aff.conversions.length, THEME.success], ["Revenue", `$${rev.toFixed(0)}`, THEME.warning]].map(([l, v, c]) => (
                             <div key={String(l)}>
-                              <div style={{ color: String(c), fontFamily: "monospace", fontSize: 14, fontWeight: 700 }}>{String(v)}</div>
-                              <div style={{ color: THEME.textMuted, fontSize: 10 }}>{String(l)}</div>
+                              <div style={{ color: String(c), fontFamily: "monospace", fontSize: 13, fontWeight: 700 }}>{String(v)}</div>
+                              <div style={{ color: THEME.textMuted, fontSize: 9 }}>{String(l)}</div>
                             </div>
                           ))}
                         </div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                          <button onClick={() => copyLink(aff.id, aff.slug)} style={{ background: copied === aff.id ? THEME.successBg : "#dbeafe", border: `1px solid ${copied === aff.id ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copied === aff.id ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copied === aff.id ? "✓ Copied" : "Sales link"}</button>
-                          {recruitLink && <button onClick={() => copyRecruitLink(aff.referralCode!)} style={{ background: copiedRecruit === aff.referralCode ? THEME.successBg : "#dbeafe", border: `1px solid ${copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copiedRecruit === aff.referralCode ? "✓ Copied" : "Recruit link"}</button>}
-                          <Link href={`/portal/dashboard?preview=${aff.id}`} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", background: "#ede9fe", border: "1px solid #6d28d9", borderRadius: 6, color: "#6d28d9", cursor: "pointer", fontSize: 11, textDecoration: "none" }}>View as Affiliate</Link>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => copyLink(aff.id, aff.slug)} style={{ background: copied === aff.id ? THEME.successBg : "#dbeafe", border: `1px solid ${copied === aff.id ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "5px 10px", color: copied === aff.id ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 10 }}>{copied === aff.id ? "✓ Copied" : "Sales link"}</button>
+                          {recruitLink && <button onClick={() => copyRecruitLink(aff.referralCode!)} style={{ background: copiedRecruit === aff.referralCode ? THEME.successBg : "#dbeafe", border: `1px solid ${copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "5px 10px", color: copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 10 }}>{copiedRecruit === aff.referralCode ? "✓ Copied" : "Recruit"}</button>}
+                          <Link href={`/portal/dashboard?preview=${aff.id}`} target="_blank" rel="noopener noreferrer" style={{ padding: "5px 10px", background: "#ede9fe", border: "1px solid #6d28d9", borderRadius: 6, color: "#6d28d9", fontSize: 10, textDecoration: "none" }}>View as Affiliate</Link>
                           {aff.status === "pending" && (
                             <>
-                              <button onClick={() => approveAffiliate(aff.id)} style={{ padding: "6px 12px", background: THEME.successBg, border: "none", borderRadius: 6, color: THEME.success, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
-                              <button onClick={() => rejectAffiliate(aff.id, aff.name)} style={{ padding: "6px 12px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 11 }}>Reject</button>
+                              <button onClick={() => approveAffiliate(aff.id)} style={{ padding: "5px 10px", background: THEME.successBg, border: "none", borderRadius: 6, color: THEME.success, cursor: "pointer", fontSize: 10, fontWeight: 600 }}>Approve</button>
+                              <button onClick={() => rejectAffiliate(aff.id, aff.name)} style={{ padding: "5px 10px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 10 }}>Reject</button>
                             </>
                           )}
                           {aff.status === "active" && (
                             <>
-                              <button onClick={() => setArchiveConfirm({ id: aff.id, name: aff.name, archived: isArchived })} style={{ padding: "6px 12px", background: isArchived ? "#dcfce7" : "#fef3c7", border: `1px solid ${isArchived ? THEME.success : "#b45309"}`, borderRadius: 6, color: isArchived ? THEME.success : "#b45309", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>{isArchived ? "Unarchive" : "Archive"}</button>
-                              <button onClick={() => { setDeleteConfirm({ step: 1, id: aff.id, name: aff.name }); setDeleteConfirmName(""); }} style={{ padding: "6px 12px", background: "#dc2626", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 11 }}>Delete Affiliate</button>
+                              <button onClick={() => setArchiveConfirm({ id: aff.id, name: aff.name, archived: isArchived })} style={{ padding: "5px 10px", background: isArchived ? "#dcfce7" : "#fef3c7", border: `1px solid ${isArchived ? THEME.success : "#b45309"}`, borderRadius: 6, color: isArchived ? THEME.success : "#b45309", cursor: "pointer", fontSize: 10, fontWeight: 600 }}>{isArchived ? "Unarchive" : "Archive"}</button>
+                              <button onClick={() => { setDeleteConfirm({ step: 1, id: aff.id, name: aff.name }); setDeleteConfirmName(""); }} style={{ padding: "5px 10px", background: "#dc2626", border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 10 }}>Delete</button>
                             </>
                           )}
                         </div>
+                        <span style={{ fontSize: 12, color: THEME.textMuted, flexShrink: 0 }}>{isExpanded ? "▼" : "▶"}</span>
                       </div>
+                      {/* Row 2: Collapsible detail grid — only when expanded */}
+                      {isExpanded && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${THEME.border}` }} onClick={(e) => e.stopPropagation()}>
+                          {/* Col 1: Tracking & Codes */}
+                          <div style={{ padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
+                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Tracking & Codes</div>
+                            <div style={{ fontSize: 11, marginBottom: 6 }}>
+                              <span style={{ color: THEME.textMuted }}>Sales link: </span>
+                              <span style={{ fontFamily: "monospace", color: THEME.accentLight }}>{salesLink}</span>
+                              <button type="button" onClick={() => { setSlugModal({ affId: aff.id, name: aff.name, currentSlug: aff.slug ?? "" }); setSlugModalValue(aff.slug ?? ""); setSlugModalAvailable(null); }} style={{ marginLeft: 6, padding: "2px 6px", fontSize: 9, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit slug</button>
+                            </div>
+                            <div style={{ marginBottom: 8, fontSize: 12 }}>
+                              <span style={{ color: THEME.textMuted, marginRight: 6 }}>Coupon:</span>
+                              {editingCouponId !== aff.id ? (
+                                <>
+                                  <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{aff.couponCode || "—"}</span>
+                                  <button type="button" onClick={() => { setEditingCouponId(aff.id); setCouponEditValue(aff.couponCode ?? ""); }} style={{ marginLeft: 6, padding: "2px 6px", fontSize: 9, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit</button>
+                                </>
+                              ) : (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                  <input value={couponEditValue} onChange={(e) => setCouponEditValue(e.target.value.trim().toUpperCase().slice(0, 32))} placeholder="e.g. SARABETH15" style={{ width: 120, padding: "4px 8px", fontSize: 11, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 4 }} />
+                                  <button type="button" disabled={couponSaving} onClick={async () => { setCouponSaving(true); try { await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ couponCode: couponEditValue.trim() || null }) }); fetchAffiliates(); setEditingCouponId(null); setCouponEditValue(""); } finally { setCouponSaving(false); } }} style={{ padding: "4px 8px", fontSize: 9, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: couponSaving ? "not-allowed" : "pointer" }}>{couponSaving ? "…" : "Save"}</button>
+                                  <button type="button" onClick={() => { setEditingCouponId(null); setCouponEditValue(""); }} style={{ padding: "4px 8px", fontSize: 9, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+                                </span>
+                              )}
+                            </div>
+                            <VolumeProgressBar monthlyRevenue={monthlyRev} nextThreshold={vol.nextThreshold} progress={vol.progress} />
+                          </div>
+                          {/* Col 2: Contact & Social */}
+                          <div style={{ padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
+                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Contact & Social</div>
+                            {(["email", "phone", "mailingAddress"] as const).map((field) => {
+                              const label = field === "email" ? "Email" : field === "phone" ? "Phone" : "Address";
+                              const val = field === "email" ? aff.email : field === "phone" ? aff.phone : aff.mailingAddress;
+                              const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === field;
+                              return (
+                                <div key={field} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                                  <span style={{ color: THEME.textMuted, fontSize: 11, minWidth: 60 }}>{label}:</span>
+                                  {isEditing ? (
+                                    <>
+                                      <input type={field === "email" ? "email" : "text"} value={inlineEditValue} onChange={(e) => setInlineEditValue(e.target.value)} placeholder={field === "mailingAddress" ? "Street, city, state, zip" : ""} style={{ flex: 1, minWidth: 120, padding: "4px 8px", fontSize: 11, border: `1px solid ${THEME.border}`, borderRadius: 4 }} />
+                                      <button type="button" disabled={inlineSaving} onClick={async () => { setInlineSaving(true); try { const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [field]: inlineEditValue }) }); if (!res.ok) throw new Error((await res.json()).error || "Failed"); fetchAffiliates(); setInlineEdit(null); setSuccessToast("Saved"); setTimeout(() => setSuccessToast(null), 2000); } catch { setSuccessToast("Failed to save"); setTimeout(() => setSuccessToast(null), 2000); } finally { setInlineSaving(false); } }} style={{ padding: "2px 8px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: inlineSaving ? "not-allowed" : "pointer" }}>{inlineSaving ? "…" : "Save"}</button>
+                                      <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "2px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span style={{ color: val ? THEME.text : "#9ca3af", fontSize: 11 }}>{val || "—"}</span>
+                                      <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field }); setInlineEditValue(val ?? ""); }} style={{ padding: "2px 4px", fontSize: 9, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{val ? "Edit" : "Add"}</button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                              {[
+                                { key: "instagramUrl" as const, icon: "📷", href: aff.instagramUrl, display: displayInstagram(aff.instagramUrl) },
+                                { key: "tiktokUrl" as const, icon: "🎵", href: aff.tiktokUrl, display: displayTiktok(aff.tiktokUrl) },
+                                { key: "youtubeUrl" as const, icon: "▶️", href: aff.youtubeUrl, display: displayYoutube(aff.youtubeUrl) },
+                                { key: "websiteUrl" as const, icon: "🌐", href: aff.websiteUrl, display: displayWebsite(aff.websiteUrl) },
+                              ].map(({ key, icon, href, display }) => {
+                                const isEditing = inlineEdit?.affId === aff.id && inlineEdit?.field === key;
+                                return (
+                                  <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                    {isEditing ? (
+                                      <>
+                                        <input value={inlineEditValue} onChange={(e) => setInlineEditValue(e.target.value)} placeholder="@handle or full URL" style={{ width: 140, padding: "4px 6px", fontSize: 10, border: `1px solid ${THEME.border}`, borderRadius: 4 }} />
+                                        <button type="button" disabled={inlineSaving} onClick={async () => { setInlineSaving(true); try { const res = await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ [key]: inlineEditValue }) }); if (!res.ok) throw new Error((await res.json()).error || "Failed"); fetchAffiliates(); setInlineEdit(null); setSuccessToast("Saved"); setTimeout(() => setSuccessToast(null), 2000); } catch { setSuccessToast("Failed"); setTimeout(() => setSuccessToast(null), 2000); } finally { setInlineSaving(false); } }} style={{ padding: "2px 6px", fontSize: 9, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>Save</button>
+                                        <button type="button" onClick={() => { setInlineEdit(null); setInlineEditValue(""); }} style={{ padding: "2px 6px", fontSize: 9, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {href ? (
+                                          <a href={href.startsWith("http") ? href : "https://" + href} target="_blank" rel="noopener noreferrer" style={{ color: THEME.accent, fontSize: 11 }} title={href}>{display || href}</a>
+                                        ) : (
+                                          <span style={{ opacity: 0.4, fontSize: 14 }} title={`Add ${key.replace("Url", "")}`}>{icon}</span>
+                                        )}
+                                        <button type="button" onClick={() => { setInlineEdit({ affId: aff.id, field: key }); setInlineEditValue(href ?? ""); }} style={{ padding: "1px 4px", fontSize: 9, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>{href ? "Edit" : "Add"}</button>
+                                      </>
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          {/* Col 3: Details & Actions */}
+                          <div style={{ padding: 12, background: THEME.bg, borderRadius: 8, border: `1px solid ${THEME.border}` }}>
+                            <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>Details & Actions</div>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ color: THEME.textMuted, fontSize: 9, marginBottom: 2 }}>Private notes</div>
+                              <textarea key={`notes-${aff.id}-${(aff.notes ?? "").slice(0, 20)}`} placeholder="e.g. Met at conference..." defaultValue={aff.notes ?? ""} onBlur={(e) => { const v = e.target.value.trim(); if (v !== (aff.notes ?? "")) saveNotes(aff.id, v); }} style={{ width: "100%", minHeight: 48, padding: "6px 8px", background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 6, fontSize: 11, color: THEME.text, outline: "none", resize: "vertical" }} />
+                              {savingNotesId === aff.id && <span style={{ fontSize: 10, color: THEME.textMuted }}>Saving…</span>}
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ color: THEME.textMuted, fontSize: 9, marginBottom: 4 }}>Tier override</div>
+                              {aff.manualTierOverride != null ? (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                  <span style={{ color: "#b45309", fontSize: 10, fontWeight: 600 }}>Manually set</span>
+                                  <button type="button" onClick={async () => { try { await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ manualTierOverride: null }) }); fetchAffiliates(); } catch { } }} style={{ padding: "2px 8px", fontSize: 10, background: "#fef3c7", color: "#b45309", border: "1px solid #b45309", borderRadius: 4, cursor: "pointer" }}>Reset to Auto</button>
+                                </span>
+                              ) : (
+                                <select value="" onChange={async (e) => { const v = e.target.value; if (!v) return; try { await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ manualTierOverride: v }) }); fetchAffiliates(); } catch { } e.target.value = ""; }} style={{ padding: "4px 8px", fontSize: 11, border: `1px solid ${THEME.border}`, borderRadius: 4, background: THEME.card }}>
+                                  <option value="">Override tier…</option>
+                                  {Object.entries(TIERS).map(([k, t]) => (
+                                    <option key={k} value={k}>{t?.label ?? k}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                            {(() => {
+                              const appFields = { phone: aff.phone, socialHandle: aff.socialHandle, marketingChannel: (aff as { marketingChannel?: string }).marketingChannel, audienceSize: (aff as { audienceSize?: string }).audienceSize, howDidYouHear: aff.howDidYouHear, whyJoin: (aff as { whyJoin?: string }).whyJoin, websiteUrl: aff.websiteUrl };
+                              const hasAny = Object.values(appFields).some(v => v != null && String(v).trim() !== "");
+                              if (!hasAny) return null;
+                              const expanded = expandedApplicationId === aff.id;
+                              return (
+                                <div style={{ marginBottom: 8, border: `1px solid ${THEME.border}`, borderRadius: 6, overflow: "hidden", fontSize: 11 }}>
+                                  <button type="button" onClick={() => setExpandedApplicationId(expanded ? null : aff.id)} style={{ width: "100%", padding: "6px 8px", background: THEME.card, border: "none", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", color: THEME.text, fontWeight: 600 }}>Application Details <span>{expanded ? "▼" : "▶"}</span></button>
+                                  {expanded && (
+                                    <div style={{ padding: "8px", borderTop: `1px solid ${THEME.border}` }}>
+                                      {appFields.phone && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Phone</span><br /><span style={{ color: THEME.text }}>{appFields.phone}</span></div>}
+                                      {appFields.socialHandle && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Social handle</span><br /><span style={{ color: THEME.text }}>{appFields.socialHandle}</span></div>}
+                                      {appFields.marketingChannel && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Marketing channel</span><br /><span style={{ color: THEME.text }}>{appFields.marketingChannel}</span></div>}
+                                      {appFields.audienceSize && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Audience size</span><br /><span style={{ color: THEME.text }}>{appFields.audienceSize}</span></div>}
+                                      {appFields.howDidYouHear && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>How did you hear</span><br /><span style={{ color: THEME.text }}>{appFields.howDidYouHear}</span></div>}
+                                      {appFields.whyJoin && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Why join</span><br /><span style={{ color: THEME.text }}>{appFields.whyJoin}</span></div>}
+                                      {appFields.websiteUrl && <div style={{ marginBottom: 4 }}><span style={{ color: THEME.textMuted, fontSize: 9 }}>Website</span><br /><a href={appFields.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: THEME.accent }}>{appFields.websiteUrl}</a></div>}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            {(aff.importSource || (aff.historicalRevenue != null && aff.historicalRevenue > 0) || (aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0)) && (
+                              <div style={{ marginBottom: 8, padding: 8, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 10 }}>
+                                <div style={{ fontWeight: 700, color: THEME.text, marginBottom: 4 }}>Historical Data</div>
+                                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "2px 8px", color: THEME.textMuted }}>
+                                  {aff.historicalRevenue != null && aff.historicalRevenue > 0 && <><span>Revenue:</span><span style={{ color: THEME.text }}>${aff.historicalRevenue.toLocaleString()}</span></>}
+                                  {aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0 && <><span>Approved:</span><span style={{ color: THEME.text }}>{aff.historicalApprovedConversions}</span></>}
+                                  {aff.importSource && <><span>Source:</span><span style={{ color: THEME.text }}>{aff.importSource === "csv-import" ? "CSV" : aff.importSource}</span></>}
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ marginBottom: 8, fontSize: 11 }}>
+                              <div style={{ color: THEME.textMuted, fontWeight: 600, marginBottom: 4 }}>Payout</div>
+                              {!aff.tipaltiPayeeId && (
+                                <button disabled={!!tipaltiInviting} onClick={async () => { setTipaltiInviting(aff.id); try { await fetch("/api/affiliates/" + aff.id + "/tipalti-invite", { method: "POST" }); fetchAffiliates(); } finally { setTipaltiInviting(null); } }} style={{ padding: "4px 10px", background: THEME.accentLight, color: "#fff", border: "none", borderRadius: 6, cursor: tipaltiInviting ? "not-allowed" : "pointer", fontSize: 10 }}>{tipaltiInviting === aff.id ? "Sending…" : "Invite to Tipalti"}</button>
+                              )}
+                              {aff.tipaltiStatus === "pending" && (
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <span style={{ background: "#fef3c7", color: "#b45309", borderRadius: 4, padding: "2px 6px", fontSize: 9 }}>Awaiting bank</span>
+                                  <button disabled={!!tipaltiRefreshing} onClick={async () => { setTipaltiRefreshing(aff.id); try { await fetch("/api/affiliates/" + aff.id + "/tipalti-status"); fetchAffiliates(); } finally { setTipaltiRefreshing(null); } }} style={{ padding: "2px 6px", fontSize: 9, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>{tipaltiRefreshing === aff.id ? "…" : "Refresh"}</button>
+                                </span>
+                              )}
+                              {aff.tipaltiStatus === "active" && <span style={{ background: "#dcfce7", color: THEME.success, borderRadius: 4, padding: "2px 6px", fontSize: 9 }}>Ready to pay</span>}
+                              {aff.tipaltiStatus === "blocked" && <span style={{ background: "#fee2e2", color: THEME.error, borderRadius: 4, padding: "2px 6px", fontSize: 9 }}>Blocked</span>}
+                            </div>
+                            {parent && <div style={{ color: THEME.textMuted, fontSize: 10, marginBottom: 4 }}>Referred by <span style={{ color: THEME.text, fontWeight: 600 }}>{parent.name}</span> — they earn {referrerPct}%</div>}
+                            {aff.children?.length > 0 && (
+                              <div style={{ color: THEME.textMuted, fontSize: 10 }}>
+                                Signed up {aff.children.length} referral{aff.children.length !== 1 ? "s" : ""} — you earn {(TIERS[displayTierKey]?.mlm2 ?? 3)}% = <span style={{ color: THEME.warning, fontFamily: "monospace" }}>${myEarnFromReferrals.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {(aff.fraudFlags?.length ?? 0) > 0 && (
+                              <div style={{ marginTop: 8, padding: 8, background: "#fef3c7", border: "1px solid #b4530960", borderRadius: 6, fontSize: 10 }}>
+                                <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Fraud flags</div>
+                                {(aff.fraudFlags ?? []).map((f: { id: string; type: string; description: string; severity: string; resolved: boolean; resolvedNote?: string | null; createdAt: string }) => (
+                                  <div key={f.id} style={{ marginBottom: 4 }}>
+                                    <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 4px", borderRadius: 4, marginRight: 6, ...(f.severity === "high" ? { background: "#fee2e2", color: "#b91c1c" } : f.severity === "medium" ? { background: "#fef3c7", color: "#b45309" } : { background: "#f1f5f9", color: "#4a5568" }) }}>{f.type}</span>
+                                    {!f.resolved && <button type="button" onClick={() => { setFraudResolveModal({ id: f.id, affiliateName: aff.name }); setFraudResolveNote(""); }} style={{ padding: "2px 6px", background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, fontSize: 9, cursor: "pointer" }}>Resolve</button>}
+                                    <div style={{ color: THEME.text, marginTop: 2 }}>{f.description}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
