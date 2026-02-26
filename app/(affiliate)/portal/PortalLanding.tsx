@@ -62,7 +62,7 @@ export default function PortalLanding({ prefilledEmail = "", autoOpenModal = fal
                 lineHeight: 1.2,
               }}
             >
-              Earn with Bio Longevity Labs
+              Earn with Biolongevity Labs
             </h1>
             <p
               style={{

@@ -21,9 +21,9 @@ const HOW_DID_YOU_HEAR = [
   "Other",
 ] as const;
 
-const AFFILIATE_AGREEMENT = `Bio Longevity Labs Affiliate Program Terms
+const AFFILIATE_AGREEMENT = `Biolongevity Labs Affiliate Program Terms
 
-1. Enrollment. By applying, you agree to promote Bio Longevity Labs products in accordance with these terms and our brand guidelines.
+1. Enrollment. By applying, you agree to promote Biolongevity Labs products in accordance with these terms and our brand guidelines.
 
 2. Commission. You will earn commission on qualified sales at the rate assigned to your tier. Commission is paid on approved conversions according to our payout schedule.
 

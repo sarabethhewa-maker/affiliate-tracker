@@ -21,7 +21,7 @@ export default function ClerkLayoutWrapper({ children }: { children: React.React
             Affiliate Dashboard
           </div>
           <div style={{ color: '#5a6a7a', fontSize: 14, marginBottom: 8 }}>
-            Bio Longevity Labs — Internal Use Only
+            Biolongevity Labs — Internal Use Only
           </div>
           <SignInButton mode="modal">
             <button style={{

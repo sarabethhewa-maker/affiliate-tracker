@@ -167,7 +167,7 @@ export default function PortalLinksPage() {
             color: THEME.text,
           }}
         >
-          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: THEME.text }}>Join my team at Bio Longevity Labs</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: THEME.text }}>Join my team at Biolongevity Labs</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: THEME.accent, color: THEME.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>{aff.name.charAt(0)}</div>
             <div>

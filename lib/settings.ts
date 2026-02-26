@@ -14,7 +14,7 @@ export const DEFAULT_TIERS: TierRow[] = [
   { name: 'Master', commission: 20, mlm2: 5, mlm3: 2, threshold: 5000 },
 ];
 
-export const DEFAULT_PROGRAM_NAME = 'Bio Longevity Labs Affiliate Program';
+export const DEFAULT_PROGRAM_NAME = 'Biolongevity Labs Affiliate Program';
 export const DEFAULT_WEBSITE_URL = 'https://biolongevitylabs.com';
 export const DEFAULT_COOKIE_DAYS = 30;
 

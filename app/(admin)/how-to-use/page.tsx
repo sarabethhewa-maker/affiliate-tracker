@@ -29,7 +29,7 @@ export default function HowToUsePage() {
     <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: THEME.text, padding: "32px 40px", maxWidth: 720 }}>
       <style>{`* { box-sizing: border-box; } a { color: ${THEME.accent}; text-decoration: none; } a:hover { text-decoration: underline; }`}</style>
       <Link href="/" style={{ display: "inline-block", marginBottom: 24, color: THEME.textMuted, fontSize: 13 }}>← Back to Dashboard</Link>
-      <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={220} height={56} style={{ width: "auto", height: 48, objectFit: "contain", marginBottom: 16 }} />
+      <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={220} height={56} style={{ width: "auto", height: 48, objectFit: "contain", marginBottom: 16 }} />
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>How to Use AffiliateOS</h1>
       <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 24 }}>Affiliate program — quick guide</p>
 

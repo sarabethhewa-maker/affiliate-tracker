@@ -64,8 +64,8 @@ export async function sendAffiliateWelcome(
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "You're in! Welcome to the BLL Affiliate Program",
-    html: `<p>Hi ${name},</p><p>You're in! Welcome to the Bio Longevity Labs Affiliate Program.</p><p><strong>Your tier:</strong> ${tierName} (${rate}% commission on sales)</p><p><strong>Sales link</strong> (share with customers):<br/><a href="${salesLink}">${salesLink}</a></p><p><strong>Recruit link</strong> (share to sign up new affiliates under you):<br/><a href="${recruitLink}">${recruitLink}</a></p><p>Sign in anytime at <a href="${portalUrl}">${portalUrl}</a> to view your dashboard, earnings, and team.</p><p>Welcome!</p>`,
+    subject: "You're in! Welcome to the Biolongevity Labs Affiliate Program",
+    html: `<p>Hi ${name},</p><p>You're in! Welcome to the Biolongevity Labs Affiliate Program.</p><p><strong>Your tier:</strong> ${tierName} (${rate}% commission on sales)</p><p><strong>Sales link</strong> (share with customers):<br/><a href="${salesLink}">${salesLink}</a></p><p><strong>Recruit link</strong> (share to sign up new affiliates under you):<br/><a href="${recruitLink}">${recruitLink}</a></p><p>Sign in anytime at <a href="${portalUrl}">${portalUrl}</a> to view your dashboard, earnings, and team.</p><p>Welcome!</p>`,
   });
 }
 
@@ -74,7 +74,7 @@ export async function sendAffiliateRejection(name: string, email: string) {
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: 'Bio Longevity Labs Affiliate Program — Application update',
-    html: `<p>Hi ${name},</p><p>Thank you for your interest in the Bio Longevity Labs Affiliate Program. After review, we're unable to approve your application at this time.</p><p>If you have questions, please reply to this email.</p><p>Best,<br/>Bio Longevity Labs Team</p>`,
+    subject: 'Biolongevity Labs Affiliate Program — Application update',
+    html: `<p>Hi ${name},</p><p>Thank you for your interest in the Biolongevity Labs Affiliate Program. After review, we're unable to approve your application at this time.</p><p>If you have questions, please reply to this email.</p><p>Best,<br/>Biolongevity Labs Team</p>`,
   });
 }

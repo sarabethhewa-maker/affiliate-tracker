@@ -148,7 +148,7 @@ export default function SettingsPage() {
     <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: THEME.text, padding: "32px 40px", maxWidth: 900 }}>
       <style>{`* { box-sizing: border-box; } input, select { font-family: inherit; }`}</style>
       <Link href="/" style={{ display: "inline-block", marginBottom: 24, color: THEME.textMuted, fontSize: 13, textDecoration: "none" }}>← Back to Dashboard</Link>
-      <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={200} height={51} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 16 }} />
+      <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={200} height={51} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 16 }} />
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Settings</h1>
       <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 32 }}>Configure your affiliate program. Changes apply app-wide and re-evaluate all affiliates when you save.</p>
 
@@ -352,7 +352,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Payer Name</label>
-            <input type="text" value={tipaltiPayerName} onChange={(e) => setTipaltiPayerName(e.target.value)} placeholder="BioLongevityLabs" style={{ width: "100%", maxWidth: 400, padding: "10px 12px", border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14 }} />
+            <input type="text" value={tipaltiPayerName} onChange={(e) => setTipaltiPayerName(e.target.value)} placeholder="BiolongevityLabs" style={{ width: "100%", maxWidth: 400, padding: "10px 12px", border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14 }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <input type="checkbox" id="tipaltiSandbox" checked={tipaltiSandbox} onChange={(e) => setTipaltiSandbox(e.target.checked)} />

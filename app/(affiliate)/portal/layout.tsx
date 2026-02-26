@@ -24,16 +24,48 @@ const navItems = [
   { href: "/portal/payouts", label: "Payouts" },
 ];
 
+const ADMIN_BTN_STYLE: React.CSSProperties = {
+  position: "fixed",
+  top: 16,
+  left: 16,
+  zIndex: 100,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "6px 12px",
+  fontSize: 12,
+  fontWeight: 500,
+  color: "#1a4a8a",
+  background: "#ffffff",
+  border: "1px solid #1a4a8a",
+  borderRadius: 8,
+  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+  textDecoration: "none",
+};
+
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isGate = pathname === "/portal";
 
+  const adminButton = (
+    <Link href="/" style={ADMIN_BTN_STYLE} aria-label="Admin Login">
+      <span>🔒</span>
+      <span>Admin Login</span>
+    </Link>
+  );
+
   if (isGate) {
-    return <>{children}</>;
+    return (
+      <>
+        {adminButton}
+        {children}
+      </>
+    );
   }
 
   return (
     <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: THEME.text }}>
+      {adminButton}
       <header style={{ borderBottom: `1px solid ${THEME.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, background: THEME.card }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
           <Link
@@ -52,7 +84,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             Admin dashboard
           </Link>
           <Link href="/portal/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, color: THEME.text, textDecoration: "none" }}>
-            <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={160} height={41} style={{ width: "auto", height: 36, objectFit: "contain" }} />
+            <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={160} height={41} style={{ width: "auto", height: 36, objectFit: "contain" }} />
             <span style={{ fontSize: 16, fontWeight: 700, color: THEME.textMuted }}>Affiliate Portal</span>
           </Link>
           <nav style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

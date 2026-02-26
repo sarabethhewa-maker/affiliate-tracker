@@ -655,7 +655,7 @@ export default function Page() {
   };
 
   const TOUR_STEPS = [
-    { text: "Welcome to AffiliateOS — this is your command center for Bio Longevity Labs' affiliate program. Start with How to Use for a quick guide.", highlight: null },
+    { text: "Welcome to AffiliateOS — this is your command center for Biolongevity Labs' affiliate program. Start with How to Use for a quick guide.", highlight: null },
     { text: "Your overview. See total revenue, clicks, conversions and top performers at a glance.", highlight: "dashboard" },
     { text: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats.", highlight: "affiliates" },
     { text: "See the full network hierarchy — who recruited who and at what level.", highlight: "mlm" },
@@ -819,7 +819,7 @@ export default function Page() {
       <div className={sidebarOpen ? "admin-sidebar open" : "admin-sidebar"} style={{ width: 220, background: THEME.sidebar, borderRight: `1px solid ${THEME.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "28px 20px 20px" }}>
           <div style={{ marginBottom: 32 }}>
-            <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={180} height={46} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 8 }} />
+            <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={180} height={46} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 8 }} />
             <div style={{ color: THEME.textMuted, fontSize: 10, letterSpacing: 1 }}>AFFILIATEOS · TRACKING</div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4 }} data-tour="nav">
@@ -874,7 +874,7 @@ export default function Page() {
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, flexWrap: "wrap", gap: 16, paddingTop: isMobile ? 48 : 0 }}>
             <div>
-              <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={200} height={51} style={{ width: "auto", height: 36, objectFit: "contain", marginBottom: 10 }} />
+              <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={200} height={51} style={{ width: "auto", height: 36, objectFit: "contain", marginBottom: 10 }} />
               <h1 style={{ fontSize: 26, fontWeight: 800, color: THEME.text, marginBottom: 4 }}>
                 {tab === "how-to-use" && "How to Use"}
                 {tab === "dashboard" && "Dashboard"}
@@ -1444,7 +1444,7 @@ export default function Page() {
             const mlmOverride = 5 * calcSales * (mlm2Rate / 100);
             const totalMonthly = direct + mlmOverride;
             const totalAnnual = totalMonthly * 12;
-            const shareText = `I could earn $${totalMonthly.toFixed(0)}/month with the BLL affiliate program. Join using my link: ${settings.websiteUrl || "[your link]"}`;
+            const shareText = `I could earn $${totalMonthly.toFixed(0)}/month with the Biolongevity Labs affiliate program. Join using my link: ${settings.websiteUrl || "[your link]"}`;
             return (
               <div style={{ maxWidth: 560 }}>
                 <div style={{ marginBottom: 24 }}>

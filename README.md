@@ -52,7 +52,7 @@ Create a webhook in WooCommerce for **Order updated** pointing to: `https://your
 Add to `.env.local`:
 
 - `TIPALTI_API_KEY` — API key from Tipalti
-- `TIPALTI_PAYER_NAME` — Payer name (e.g. `BioLongevityLabs`)
+- `TIPALTI_PAYER_NAME` — Payer name (e.g. `BiolongevityLabs`)
 - `TIPALTI_SANDBOX=true` — Set to `false` in production
 
 Configure Tipalti webhook for payment status to: `https://your-domain.com/api/webhooks/tipalti`.

@@ -12,7 +12,7 @@ const HOW_DID_YOU_HEAR = [
   { value: "Other", label: "Other" },
 ];
 
-// Bio Longevity Labs brand: dark blue + light blue on white
+// Biolongevity Labs brand: dark blue + light blue on white
 const brand = {
   darkBlue: "#1e3a5f",
   lightBlue: "#3a7ca5",
@@ -161,7 +161,7 @@ export default function JoinPage() {
       <style>{`* { box-sizing: border-box; } input, select { font-family: inherit; } input:focus, select:focus { border-color: ${brand.lightBlue}; box-shadow: 0 0 0 2px rgba(58,124,165,0.2); }`}</style>
       <div style={styles.card}>
         <div style={styles.logoWrap}>
-          <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={220} height={56} priority style={{ width: "auto", height: 48, objectFit: "contain" }} />
+          <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={220} height={56} priority style={{ width: "auto", height: 48, objectFit: "contain" }} />
         </div>
         <h1 style={styles.title}>Become an Affiliate</h1>
         <p style={styles.subtitle}>
