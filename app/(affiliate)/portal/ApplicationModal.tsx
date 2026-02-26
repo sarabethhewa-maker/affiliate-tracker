@@ -13,12 +13,23 @@ const THEME = {
   success: "#38a169",
 };
 
-const HOW_DID_YOU_HEAR = [
+const MARKETING_CHANNELS = [
   "Social Media",
-  "Friend/Referral",
-  "Google",
-  "Existing Affiliate",
+  "Blog/Website",
+  "Email List",
+  "YouTube",
+  "TikTok",
+  "Podcast",
+  "Word of Mouth",
   "Other",
+] as const;
+
+const AUDIENCE_SIZES = [
+  "Under 1,000",
+  "1,000-10,000",
+  "10,000-50,000",
+  "50,000-100,000",
+  "100,000+",
 ] as const;
 
 const AFFILIATE_AGREEMENT = `Biolongevity Labs Affiliate Program Terms
@@ -46,7 +57,11 @@ export default function ApplicationModal({ onClose, onSuccess, prefilledEmail = 
   const [email, setEmail] = useState(prefilledEmail);
   const [phone, setPhone] = useState("");
   const [socialHandle, setSocialHandle] = useState("");
+  const [marketingChannel, setMarketingChannel] = useState("");
+  const [audienceSize, setAudienceSize] = useState("");
   const [howDidYouHear, setHowDidYouHear] = useState("");
+  const [whyJoin, setWhyJoin] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +89,11 @@ export default function ApplicationModal({ onClose, onSuccess, prefilledEmail = 
           email: email.trim().toLowerCase(),
           phone: phone.trim() || undefined,
           socialHandle: socialHandle.trim() || undefined,
-          howDidYouHear: howDidYouHear || undefined,
+          marketingChannel: marketingChannel || undefined,
+          audienceSize: audienceSize || undefined,
+          howDidYouHear: howDidYouHear.trim() || undefined,
+          whyJoin: whyJoin.trim() || undefined,
+          websiteUrl: websiteUrl.trim() || undefined,
           referralCode: referralCode.trim() || undefined,
           agreeToTerms: true,
         }),
@@ -143,12 +162,35 @@ export default function ApplicationModal({ onClose, onSuccess, prefilledEmail = 
                 style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box" }} />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>How did you hear about us?</label>
-              <select value={howDidYouHear} onChange={e => setHowDidYouHear(e.target.value)}
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>Primary marketing channel</label>
+              <select value={marketingChannel} onChange={e => setMarketingChannel(e.target.value)}
                 style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box" }}>
                 <option value="">Select...</option>
-                {HOW_DID_YOU_HEAR.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                {MARKETING_CHANNELS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>Estimated audience size</label>
+              <select value={audienceSize} onChange={e => setAudienceSize(e.target.value)}
+                style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box" }}>
+                <option value="">Select...</option>
+                {AUDIENCE_SIZES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>How did you hear about us?</label>
+              <input type="text" value={howDidYouHear} onChange={e => setHowDidYouHear(e.target.value)} placeholder="e.g. Google, a friend, Instagram..."
+                style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>Why do you want to join our affiliate program?</label>
+              <textarea value={whyJoin} onChange={e => setWhyJoin(e.target.value)} placeholder="Tell us a bit about your goals..."
+                rows={3} style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box", resize: "vertical" }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>Website or social media URL</label>
+              <input type="url" value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} placeholder="https://..."
+                style={{ width: "100%", padding: "10px 14px", background: THEME.inputBg, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 14, color: THEME.text, boxSizing: "border-box" }} />
             </div>
             <div>
               <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 6 }}>Were you referred by an existing affiliate? Enter their code here</label>

@@ -387,6 +387,9 @@ export default function Page() {
   const [fraudResolveNote, setFraudResolveNote] = useState("");
   const [fraudResolveSaving, setFraudResolveSaving] = useState(false);
   const [fraudScanning, setFraudScanning] = useState(false);
+  const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
+  const [topProducts, setTopProducts] = useState<{ productName: string; unitsSold: number; revenue: number; uniqueAffiliates: number }[]>([]);
+  const [topProductsLoading, setTopProductsLoading] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -531,6 +534,26 @@ export default function Page() {
     }
   }, []);
   useEffect(() => { if (tab === "dashboard") fetchAlerts(); }, [tab, fetchAlerts]);
+
+  const fetchTopProducts = useCallback(async () => {
+    setTopProductsLoading(true);
+    try {
+      const res = await fetch("/api/admin/top-products?period=" + encodeURIComponent(dateRangeFilter));
+      const text = await res.text();
+      let data: unknown;
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch {
+        data = [];
+      }
+      setTopProducts(Array.isArray(data) ? data : []);
+    } catch {
+      setTopProducts([]);
+    } finally {
+      setTopProductsLoading(false);
+    }
+  }, [dateRangeFilter]);
+  useEffect(() => { if (tab === "dashboard") fetchTopProducts(); }, [tab, fetchTopProducts, dateRangeFilter]);
 
   useEffect(() => {
     const mq = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)");
@@ -1142,6 +1165,37 @@ export default function Page() {
                 })}
                 {activeAffiliates.length === 0 && <div style={{ color: THEME.textMuted, fontSize: 13, textAlign: "center", padding: 20 }}>No affiliates yet — add your first one!</div>}
               </div>
+              <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, marginTop: 24 }}>
+                <div style={{ color: THEME.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" as const, marginBottom: 16 }}>Top Products (by affiliate revenue in period)</div>
+                {topProductsLoading ? (
+                  <div style={{ color: THEME.textMuted, fontSize: 13 }}>Loading…</div>
+                ) : topProducts.length === 0 ? (
+                  <div style={{ color: THEME.textMuted, fontSize: 13 }}>No product data in this period. Conversions with line items from WooCommerce will appear here.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `2px solid ${THEME.border}` }}>
+                          <th style={{ textAlign: "left", padding: "8px 12px", color: THEME.textMuted, fontWeight: 600 }}>Product</th>
+                          <th style={{ textAlign: "right", padding: "8px 12px", color: THEME.textMuted, fontWeight: 600 }}>Units sold</th>
+                          <th style={{ textAlign: "right", padding: "8px 12px", color: THEME.textMuted, fontWeight: 600 }}>Revenue</th>
+                          <th style={{ textAlign: "right", padding: "8px 12px", color: THEME.textMuted, fontWeight: 600 }}>Affiliates</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topProducts.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: `1px solid ${THEME.border}` }}>
+                            <td style={{ padding: "10px 12px", color: THEME.text }}>{row.productName}</td>
+                            <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace", color: THEME.text }}>{row.unitsSold}</td>
+                            <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace", color: THEME.warning }}>${row.revenue.toLocaleString()}</td>
+                            <td style={{ padding: "10px 12px", textAlign: "right", color: THEME.text }}>{row.uniqueAffiliates}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
               {/* Activity feed */}
               <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, marginTop: 24 }}>
                 <div style={{ color: THEME.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" as const, marginBottom: 16 }}>Activity</div>
@@ -1510,6 +1564,31 @@ export default function Page() {
                             />
                             {savingNotesId === aff.id && <span style={{ fontSize: 11, color: THEME.textMuted }}>Saving…</span>}
                           </div>
+                          {(() => {
+                            const appFields = { phone: aff.phone, socialHandle: aff.socialHandle, marketingChannel: (aff as { marketingChannel?: string }).marketingChannel, audienceSize: (aff as { audienceSize?: string }).audienceSize, howDidYouHear: aff.howDidYouHear, whyJoin: (aff as { whyJoin?: string }).whyJoin, websiteUrl: aff.websiteUrl };
+                            const hasAny = Object.values(appFields).some(v => v != null && String(v).trim() !== "");
+                            if (!hasAny) return null;
+                            const expanded = expandedApplicationId === aff.id;
+                            return (
+                              <div style={{ marginTop: 12, border: `1px solid ${THEME.border}`, borderRadius: 8, overflow: "hidden", fontSize: 12 }}>
+                                <button type="button" onClick={() => setExpandedApplicationId(expanded ? null : aff.id)} style={{ width: "100%", padding: "10px 12px", background: THEME.bg, border: "none", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", color: THEME.text, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1 }}>
+                                  <span>Application Details</span>
+                                  <span style={{ fontSize: 14 }}>{expanded ? "▼" : "▶"}</span>
+                                </button>
+                                {expanded && (
+                                  <div style={{ padding: "10px 12px", borderTop: `1px solid ${THEME.border}`, background: THEME.card }}>
+                                    {appFields.phone && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Phone</span><br /><span style={{ color: THEME.text }}>{appFields.phone}</span></div>}
+                                    {appFields.socialHandle && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Social handle</span><br /><span style={{ color: THEME.text }}>{appFields.socialHandle}</span></div>}
+                                    {appFields.marketingChannel && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Marketing channel</span><br /><span style={{ color: THEME.text }}>{appFields.marketingChannel}</span></div>}
+                                    {appFields.audienceSize && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Audience size</span><br /><span style={{ color: THEME.text }}>{appFields.audienceSize}</span></div>}
+                                    {appFields.howDidYouHear && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>How did you hear about us</span><br /><span style={{ color: THEME.text }}>{appFields.howDidYouHear}</span></div>}
+                                    {appFields.whyJoin && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Why join</span><br /><span style={{ color: THEME.text }}>{appFields.whyJoin}</span></div>}
+                                    {appFields.websiteUrl && <div style={{ marginBottom: 6 }}><span style={{ color: THEME.textMuted, fontSize: 11 }}>Website / URL</span><br /><a href={appFields.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: THEME.accent }}>{appFields.websiteUrl}</a></div>}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div style={{ marginTop: 12, padding: 10, background: THEME.bg, borderRadius: 8, fontSize: 12 }}>
                             <div style={{ color: THEME.textMuted, fontWeight: 700, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 1 }}>Payout Setup</div>
                             {!aff.tipaltiPayeeId && (

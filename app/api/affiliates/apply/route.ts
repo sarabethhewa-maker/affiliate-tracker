@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { sendAdminNewSignup } from '@/lib/email';
 import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
-const HOW_DID_YOU_HEAR = ['Social Media', 'Friend/Referral', 'Google', 'Existing Affiliate', 'Other'] as const;
+const MARKETING_CHANNELS = ['Social Media', 'Blog/Website', 'Email List', 'YouTube', 'TikTok', 'Podcast', 'Word of Mouth', 'Other'] as const;
+const AUDIENCE_SIZES = ['Under 1,000', '1,000-10,000', '10,000-50,000', '50,000-100,000', '100,000+'] as const;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -12,7 +13,11 @@ export async function POST(req: NextRequest) {
     email,
     phone,
     socialHandle,
+    marketingChannel,
+    audienceSize,
     howDidYouHear,
+    whyJoin,
+    websiteUrl,
     referralCode: refCode,
     agreeToTerms,
   } = body;
@@ -49,7 +54,8 @@ export async function POST(req: NextRequest) {
     if (referrer) parentId = referrer.id;
   }
 
-  const howValue = howDidYouHear && HOW_DID_YOU_HEAR.includes(howDidYouHear) ? howDidYouHear : null;
+  const marketingValue = marketingChannel && MARKETING_CHANNELS.includes(marketingChannel) ? marketingChannel : null;
+  const audienceValue = audienceSize && AUDIENCE_SIZES.includes(audienceSize) ? audienceSize : null;
   const slug = await generateUniqueSlug(prisma, slugFromName(String(name).trim()));
 
   const affiliate = await prisma.affiliate.create({
@@ -61,7 +67,11 @@ export async function POST(req: NextRequest) {
       parentId,
       phone: phone ? String(phone).trim() : null,
       socialHandle: socialHandle ? String(socialHandle).trim() : null,
-      howDidYouHear: howValue,
+      marketingChannel: marketingValue,
+      audienceSize: audienceValue,
+      howDidYouHear: howDidYouHear ? String(howDidYouHear).trim().slice(0, 500) : null,
+      whyJoin: whyJoin ? String(whyJoin).trim().slice(0, 2000) : null,
+      websiteUrl: websiteUrl ? String(websiteUrl).trim().slice(0, 500) : null,
     },
   });
 

@@ -23,6 +23,9 @@ model Affiliate {
   phone            String?
   socialHandle     String?
   howDidYouHear    String?
+  marketingChannel String?
+  audienceSize     String?
+  whyJoin         String?
   tipaltiPayeeId   String?   // Tipalti idap (we use affiliate id as idap)
   tipaltiStatus    String?   // pending | active | blocked
   notes            String?   // private admin notes, never shown to affiliate
