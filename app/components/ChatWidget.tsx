@@ -66,6 +66,7 @@ export default function ChatWidget({ context, label }: ChatWidgetProps) {
         configured?: boolean;
         text?: string;
         error?: string;
+        debug?: string;
       };
       if (data.configured === false) {
         setConfigured(false);
@@ -74,9 +75,14 @@ export default function ChatWidget({ context, label }: ChatWidgetProps) {
       }
       setConfigured(true);
       const reply = data.error ?? data.text ?? "Something went wrong. Please try again.";
+      if (data.error) {
+        console.error("[ChatWidget] API returned error:", data.error, data.debug ?? "");
+      }
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
-    } catch {
-      setMessages((m) => [...m, { role: "assistant", text: "Something went wrong. Please try again." }]);
+    } catch (e) {
+      const errMessage = e instanceof Error ? e.message : "Something went wrong. Please try again.";
+      console.error("[ChatWidget] Request failed:", e);
+      setMessages((m) => [...m, { role: "assistant", text: errMessage }]);
     } finally {
       setLoading(false);
     }

@@ -10,6 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@clerk/nextjs": "^6.38.2",
     "@mailchimp/mailchimp_marketing": "^3.0.80",
     "@prisma/client": "^6.19.2",
