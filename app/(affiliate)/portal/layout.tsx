@@ -47,7 +47,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const isGate = pathname === "/portal";
 
   const adminButton = (
-    <Link href="/" style={ADMIN_BTN_STYLE} aria-label="Admin Login">
+    <Link href="/dashboard" style={ADMIN_BTN_STYLE} aria-label="Admin Login">
       <span>🔒</span>
       <span>Admin Login</span>
     </Link>
@@ -68,7 +68,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <header style={{ borderBottom: `1px solid ${THEME.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, background: THEME.card }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
           <Link
-            href="/"
+            href="/dashboard"
             style={{
               padding: "6px 14px",
               borderRadius: 8,

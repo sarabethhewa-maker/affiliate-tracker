@@ -87,6 +87,29 @@ export async function PATCH(
     return NextResponse.json(updated);
   }
 
+  // coupon code update
+  if (body.couponCode !== undefined) {
+    const code = typeof body.couponCode === 'string' ? body.couponCode.trim() || null : null;
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: { couponCode: code },
+      include: { clicks: true, conversions: true, children: true, payouts: true },
+    });
+    return NextResponse.json(updated);
+  }
+
+  // add store credit
+  if (typeof body.storeCreditAdd === 'number' && body.storeCreditAdd > 0) {
+    const aff = await prisma.affiliate.findUnique({ where: { id }, select: { storeCredit: true } });
+    if (!aff) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: { storeCredit: aff.storeCredit + body.storeCreditAdd },
+      include: { clicks: true, conversions: true, children: true, payouts: true },
+    });
+    return NextResponse.json(updated);
+  }
+
   // generic update (state, notes, etc.)
   const data: { state?: string; notes?: string } = {};
   if (body.state !== undefined) data.state = body.state;

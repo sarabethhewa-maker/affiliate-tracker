@@ -13,6 +13,8 @@ model Affiliate {
   name             String
   email            String    @unique
   slug             String?   @unique // pretty referral link e.g. /ref/sarabeth
+  couponCode       String?   // WooCommerce coupon e.g. SARABETH15 — credit via link OR coupon
+  storeCredit      Float     @default(0) // balance for use on store (admin can add)
   tier             String    @default("silver")
   status           String    @default("active") // active | pending | rejected
   state            String?
@@ -42,17 +44,22 @@ model Click {
 }
 
 model Conversion {
-  id          String    @id @default(cuid())
-  affiliateId String
-  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
-  amount      Float
-  status      String    @default("pending") // pending | approved | paid
-  product     String?
-  note        String?
-  orderId     String?   @unique // WooCommerce order ID when source is woocommerce
-  source      String?   // "woocommerce" | "manual" etc.
-  paidAt      DateTime?
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  affiliateId   String
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id])
+  amount        Float
+  status        String    @default("pending") // pending | approved | paid
+  product       String?
+  note          String?
+  orderId       String?   @unique // WooCommerce order ID when source is woocommerce
+  orderNumber   String?   // display number e.g. 4521
+  orderStatus   String?   // processing | completed | refunded
+  orderItems    Json?     // [{ name, quantity, total }] from WooCommerce
+  customerName  String?   // first name only
+  customerCity  String?   // city only
+  source        String?   // "woocommerce" | "manual" etc.
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
 }
 
 model Payout {

@@ -17,20 +17,43 @@ const THEME = {
 
 const benefits = [
   {
-    title: "Earn 10–20% commission",
-    description: "Tiered rates based on your sales volume. The more you sell, the higher your rate—up to 20% on every sale.",
+    title: "Industry-Leading Commissions",
+    description: "Earn up to 20% on every sale with our tiered commission structure. The more you sell, the more you earn.",
     icon: "💰",
   },
   {
-    title: "Build your downline",
-    description: "Recruit other affiliates and earn override commissions on their sales. Our MLM structure rewards team building.",
+    title: "Build Your Network",
+    description: "Recruit other affiliates and earn override commissions on their sales too. True passive income through our MLM structure.",
+    icon: "🌐",
+  },
+  {
+    title: "Real-Time Dashboard",
+    description: "Track your clicks, sales, and earnings in real time. Full visibility into your performance 24/7.",
     icon: "📈",
   },
   {
-    title: "Get paid fast",
-    description: "Regular payouts via PayPal, bank transfer, or Tipalti. Approved conversions are paid on your chosen schedule.",
+    title: "Fast Payouts",
+    description: "Get paid reliably via bank transfer, PayPal, or Venmo. Automated payouts through Tipalti.",
     icon: "⚡",
   },
+];
+
+const tiers = [
+  { name: "Silver", rate: "10%", tagline: "Perfect for getting started", level: "entry level" },
+  { name: "Gold", rate: "15%", tagline: "For affiliates generating $2,000+/month", level: "★ Most Popular", featured: true },
+  { name: "Master", rate: "20%", tagline: "For top performers generating $5,000+/month", level: "top tier" },
+];
+
+const steps = [
+  { title: "Apply", desc: "Fill out our simple application" },
+  { title: "Get Approved", desc: "We review within 48 hours" },
+  { title: "Start Earning", desc: "Share your link and earn" },
+];
+
+const stats = [
+  { value: "$1M+", label: "paid to affiliates" },
+  { value: "500+", label: "active partners" },
+  { value: "Up to 20%", label: "commission" },
 ];
 
 type Props = {
@@ -115,24 +138,107 @@ export default function PortalLanding({ prefilledEmail = "", autoOpenModal = fal
         </section>
 
         {/* Benefits */}
-        <section style={{ padding: "40px 24px 56px", background: THEME.bgAlt }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 24 }}>
-            {benefits.map((b, i) => (
-              <div
-                key={i}
-                style={{
-                  background: THEME.bg,
-                  border: `1px solid ${THEME.border}`,
-                  borderRadius: 12,
-                  padding: 28,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ fontSize: 32, marginBottom: 12 }}>{b.icon}</div>
-                <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, marginBottom: 8 }}>{b.title}</h3>
-                <p style={{ fontSize: 14, color: THEME.textMuted, lineHeight: 1.5 }}>{b.description}</p>
-              </div>
-            ))}
+        <section style={{ padding: "48px 24px 56px", background: THEME.bgAlt }}>
+          <div style={{ maxWidth: 960, margin: "0 auto" }}>
+            <h2 style={{ fontSize: "clamp(24px, 3vw, 30px)", fontWeight: 800, color: THEME.text, textAlign: "center", marginBottom: 32 }}>
+              Why Partner With Biolongevity Labs?
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 24 }}>
+              {benefits.map((b, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: THEME.bg,
+                    border: `1px solid ${THEME.border}`,
+                    borderRadius: 12,
+                    padding: 28,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>{b.icon}</div>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, marginBottom: 8 }}>{b.title}</h3>
+                  <p style={{ fontSize: 14, color: THEME.textMuted, lineHeight: 1.5 }}>{b.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Commission Tiers */}
+        <section style={{ padding: "48px 24px 56px", background: THEME.bg }}>
+          <div style={{ maxWidth: 960, margin: "0 auto" }}>
+            <h2 style={{ fontSize: "clamp(24px, 3vw, 30px)", fontWeight: 800, color: THEME.text, textAlign: "center", marginBottom: 32 }}>
+              Your Earning Potential
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24, alignItems: "stretch" }}>
+              {tiers.map((t, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: t.featured ? "linear-gradient(135deg, #f0f7ff 0%, #e8f0fe 100%)" : THEME.bgAlt,
+                    border: t.featured ? `2px solid ${THEME.accent}` : `1px solid ${THEME.border}`,
+                    borderRadius: 12,
+                    padding: 28,
+                    boxShadow: t.featured ? "0 8px 24px rgba(26, 74, 138, 0.15)" : "0 4px 12px rgba(0,0,0,0.04)",
+                    position: "relative",
+                  }}
+                >
+                  {t.featured && (
+                    <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: THEME.accent, color: "#fff", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>
+                      {t.level}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 14, color: THEME.textMuted, marginBottom: 8, fontWeight: 600 }}>{t.name}</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: THEME.accent, marginBottom: 8 }}>{t.rate}</div>
+                  <p style={{ fontSize: 14, color: THEME.textMuted, lineHeight: 1.5 }}>{t.tagline}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section style={{ padding: "48px 24px 56px", background: THEME.bgAlt }}>
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <h2 style={{ fontSize: "clamp(24px, 3vw, 30px)", fontWeight: 800, color: THEME.text, textAlign: "center", marginBottom: 32 }}>
+              How It Works
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+              {steps.map((s, i) => (
+                <div key={i} style={{ textAlign: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: THEME.accent, color: "#fff", fontSize: 20, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>{i + 1}</div>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, marginBottom: 8 }}>{s.title}</h3>
+                  <p style={{ fontSize: 14, color: THEME.textMuted, lineHeight: 1.5 }}>{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Social proof */}
+        <section style={{ padding: "48px 24px 56px", background: THEME.bg }}>
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <h2 style={{ fontSize: "clamp(24px, 3vw, 30px)", fontWeight: 800, color: THEME.text, textAlign: "center", marginBottom: 32 }}>
+              Join Our Growing Network
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 24 }}>
+              {stats.map((s, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: THEME.bgAlt,
+                    border: `1px solid ${THEME.border}`,
+                    borderRadius: 12,
+                    padding: 24,
+                    textAlign: "center",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <div style={{ fontSize: 28, fontWeight: 800, color: THEME.accent, marginBottom: 4 }}>{s.value}</div>
+                  <div style={{ fontSize: 14, color: THEME.textMuted }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

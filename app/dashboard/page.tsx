@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Tooltip from "../components/Tooltip";
-import ImportAffiliatesTab from "./ImportAffiliatesTab";
+import ImportAffiliatesTab from "@/app/(admin)/ImportAffiliatesTab";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
 
 function getCurrentMonthRevenue(conversions: { amount: number; createdAt: string }[]): number {
@@ -152,7 +152,7 @@ function HowToUseContent({ theme }: { theme: typeof THEME }) {
     <div style={{ maxWidth: 720 }}>
       <div style={{ background: "#e0f2fe", border: `1px solid ${theme.accent}40`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
         <p style={{ color: theme.text, fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-          <strong>All program rules</strong> like tier names, commission rates, and thresholds can be customized in <strong><Link href="/settings" style={{ color: theme.accent }}>Settings</Link></strong> — no code required.
+          <strong>All program rules</strong> like tier names, commission rates, and thresholds can be customized in <strong><Link href="/dashboard/settings" style={{ color: theme.accent }}>Settings</Link></strong> — no code required.
         </p>
       </div>
       <div style={card}>
@@ -195,15 +195,15 @@ function HowToUseContent({ theme }: { theme: typeof THEME }) {
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>🛒</span> WooCommerce</h2>
-        <p style={body}>Connect your store in <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → WooCommerce</Link></strong>: Store URL, Consumer Key, Consumer Secret. Test Connection, then Manual Sync. For automation, create an <strong>Order updated</strong> webhook in WooCommerce pointing to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/woocommerce</code> and set <code>WOOCOMMERCE_WEBHOOK_SECRET</code>. Orders become conversions and tiers recalculate automatically.</p>
+        <p style={body}>Connect your store in <strong><Link href="/dashboard/settings" style={{ color: theme.accent }}>Settings → WooCommerce</Link></strong>: Store URL, Consumer Key, Consumer Secret. Test Connection, then Manual Sync. For automation, create an <strong>Order updated</strong> webhook in WooCommerce pointing to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/woocommerce</code> and set <code>WOOCOMMERCE_WEBHOOK_SECRET</code>. Orders become conversions and tiers recalculate automatically.</p>
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>💸</span> Tipalti</h2>
-        <p style={body}>In <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Tipalti</Link></strong> add API Key and Payer Name. Use Tipalti Invite from the Affiliates tab so affiliates complete payment onboarding. Pay via Tipalti or Mass Payout from the Payouts tab. Configure the Tipalti webhook to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/tipalti</code> for payment status updates.</p>
+        <p style={body}>In <strong><Link href="/dashboard/settings" style={{ color: theme.accent }}>Settings → Tipalti</Link></strong> add API Key and Payer Name. Use Tipalti Invite from the Affiliates tab so affiliates complete payment onboarding. Pay via Tipalti or Mass Payout from the Payouts tab. Configure the Tipalti webhook to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/tipalti</code> for payment status updates.</p>
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>📧</span> Email Marketing (Klaviyo / Mailchimp)</h2>
-        <p style={body}>In <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Email Marketing</Link></strong> choose Klaviyo or Mailchimp, enter API key and List ID (and Mailchimp server prefix). Test Connection, then Sync All Affiliates. Syncing also runs automatically when you approve an affiliate, when their tier changes, and when a payout is sent.</p>
+        <p style={body}>In <strong><Link href="/dashboard/settings" style={{ color: theme.accent }}>Settings → Email Marketing</Link></strong> choose Klaviyo or Mailchimp, enter API key and List ID (and Mailchimp server prefix). Test Connection, then Sync All Affiliates. Syncing also runs automatically when you approve an affiliate, when their tier changes, and when a payout is sent.</p>
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>📬</span> Weekly Email Digest</h2>
@@ -211,7 +211,7 @@ function HowToUseContent({ theme }: { theme: typeof THEME }) {
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>🔐</span> Admin Access</h2>
-        <p style={body}>Only emails in <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Admin emails</Link></strong> (or Admin notification email) can open the admin dashboard. First-time: set <code>FIRST_ADMIN_EMAIL=your@email.com</code> in .env.local, then add your email in Settings. Use <strong>Affiliate dashboard</strong> (top right) to open /portal; affiliates see Admin dashboard in the portal header.</p>
+        <p style={body}>Only emails in <strong><Link href="/dashboard/settings" style={{ color: theme.accent }}>Settings → Admin emails</Link></strong> (or Admin notification email) can open the admin dashboard. First-time: set <code>FIRST_ADMIN_EMAIL=your@email.com</code> in .env.local, then add your email in Settings. Use <strong>Affiliate dashboard</strong> (top right) to open /portal; affiliates see Admin dashboard in the portal header.</p>
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>👤</span> Affiliate Portal</h2>
@@ -620,9 +620,9 @@ export default function Page() {
     return d.toLocaleDateString();
   };
 
-  const SETTINGS_ACTIVE = pathname === "/settings";
+  const SETTINGS_ACTIVE = pathname === "/dashboard/settings";
   const NAV = [
-    { id: "settings", label: "Settings & Customization", icon: "⚙", href: "/settings", isLink: true as const, tooltip: "Program settings, tiers, Tipalti, WooCommerce, email marketing, and admin emails." },
+    { id: "settings", label: "Settings & Customization", icon: "⚙", href: "/dashboard/settings", isLink: true as const, tooltip: "Program settings, tiers, Tipalti, WooCommerce, email marketing, and admin emails." },
     { id: "dashboard", label: "Dashboard", icon: "▦", tooltip: "Your overview. See total revenue, clicks, conversions and top performers at a glance." },
     { id: "conversions", label: "Conversion Status", icon: "◉", tooltip: "A conversion is recorded when a customer makes a purchase through the affiliate's link. Approve and mark paid here." },
     { id: "affiliates", label: "Affiliates", icon: "◈", tooltip: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats." },
@@ -844,7 +844,7 @@ export default function Page() {
       <div className={sidebarOpen ? "admin-sidebar open" : "admin-sidebar"} style={{ width: 220, background: THEME.sidebar, borderRight: `1px solid ${THEME.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "28px 20px 20px" }}>
           <div style={{ marginBottom: 32 }}>
-            <Link href="/" style={{ display: "block" }}>
+            <Link href="/dashboard" style={{ display: "block" }}>
               <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 40, width: "auto", objectFit: "contain", display: "block" }} />
             </Link>
           </div>
@@ -877,7 +877,7 @@ export default function Page() {
           </nav>
         </div>
         <div style={{ marginTop: "auto", padding: 20, borderTop: `1px solid ${THEME.border}` }}>
-          <Link href="/how-to-use" style={{ display: "block", color: THEME.textMuted, fontSize: 12, marginBottom: 12, textDecoration: "none" }}>How to Use (full page)</Link>
+          <Link href="/dashboard/how-to-use" style={{ display: "block", color: THEME.textMuted, fontSize: 12, marginBottom: 12, textDecoration: "none" }}>How to Use (full page)</Link>
           <div style={{ color: THEME.textMuted, fontSize: 10, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" as const }}>Active</div>
           <div style={{ color: THEME.accentLight, fontFamily: "monospace", fontSize: 22, fontWeight: 700 }}>{affiliates.filter(a => a.status === "active").length}</div>
           <div style={{ color: THEME.success, fontSize: 11, marginTop: 2 }}>{affiliates.length} total enrolled</div>

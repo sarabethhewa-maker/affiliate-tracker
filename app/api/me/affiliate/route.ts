@@ -84,6 +84,8 @@ export async function GET(req: NextRequest) {
       name: affiliate.name,
       email: affiliate.email,
       slug: affiliate.slug,
+      couponCode: affiliate.couponCode,
+      storeCredit: affiliate.storeCredit,
       tier: affiliate.tier,
       status: affiliate.status,
       referralCode: affiliate.referralCode,
@@ -115,6 +117,7 @@ export async function GET(req: NextRequest) {
     totalSales: affiliate.conversions.reduce((s, c) => s + c.amount, 0),
     totalEarned,
     pendingPayout,
+    storeCredit: affiliate.storeCredit,
   });
   } catch (e) {
     console.error('[api/me/affiliate]', e);

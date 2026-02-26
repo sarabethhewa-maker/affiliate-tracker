@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Affiliate" ADD COLUMN "couponCode" TEXT,
+ADD COLUMN "storeCredit" DOUBLE PRECISION NOT NULL DEFAULT 0;
