@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import OnboardingChecklist from "./OnboardingChecklist";
+import ChatWidget from "@/app/components/ChatWidget";
 
 const THEME = {
   bg: "#f8fafc",
@@ -58,6 +59,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <>
         {adminButton}
         {children}
+        <ChatWidget context="portal" label="Ask anything about our program" />
       </>
     );
   }
@@ -110,6 +112,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
         <OnboardingChecklist>{children}</OnboardingChecklist>
       </main>
+      <ChatWidget context="portal" label="Ask anything about our program" />
     </div>
   );
 }

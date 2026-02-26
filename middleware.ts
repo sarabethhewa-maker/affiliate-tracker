@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 export default clerkMiddleware((_auth, req) => {
   const pathname = req.nextUrl.pathname;
+  if (pathname === '/') return NextResponse.redirect(new URL('/portal', req.url));
   if (pathname === '/admin') return NextResponse.redirect(new URL('/dashboard', req.url));
   if (pathname === '/settings') return NextResponse.redirect(new URL('/dashboard/settings', req.url));
   if (pathname === '/how-to-use') return NextResponse.redirect(new URL('/dashboard/how-to-use', req.url));

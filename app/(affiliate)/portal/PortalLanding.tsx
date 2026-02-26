@@ -61,8 +61,8 @@ type Props = {
   autoOpenModal?: boolean;
 };
 
-export default function PortalLanding({ prefilledEmail = "", autoOpenModal = false }: Props) {
-  const [modalOpen, setModalOpen] = useState(autoOpenModal);
+export default function PortalLanding({ prefilledEmail = "", autoOpenModal: _autoOpenModal = false }: Props) {
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <>

@@ -80,14 +80,14 @@ export default function PortalGate() {
     return <PortalLanding />;
   }
 
-  // Signed in, no application → Stage 3: landing + prefill + auto-open modal
+  // Signed in, no application → Stage 3: landing + prefill (modal only on Apply Now click)
   if (me && "noApplication" in me && me.noApplication) {
-    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} autoOpenModal />;
+    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} />;
   }
 
   // Signed in, rejected → same as no application (can re-apply)
   if (me && "rejected" in me && me.rejected) {
-    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} autoOpenModal />;
+    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} />;
   }
 
   // Signed in, pending → Stage 2: waiting screen only
