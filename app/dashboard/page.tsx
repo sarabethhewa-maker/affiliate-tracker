@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Tooltip from "../components/Tooltip";
 import ImportAffiliatesTab from "@/app/(admin)/ImportAffiliatesTab";
+import MessageTemplatesTab from "@/app/(admin)/MessageTemplatesTab";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
 
 function getCurrentMonthRevenue(conversions: { amount: number; createdAt: string }[]): number {
@@ -723,6 +724,7 @@ export default function Page() {
     { id: "settings", label: "Settings & Customization", icon: "⚙", href: "/dashboard/settings", isLink: true as const, tooltip: "Program settings, tiers, Tipalti, WooCommerce, email marketing, and admin emails." },
     { id: "dashboard", label: "Dashboard", icon: "▦", tooltip: "Your overview. See total revenue, clicks, conversions and top performers at a glance." },
     { id: "announcements", label: "Announcements", icon: "🔔", tooltip: "Post updates that affiliates see in their portal." },
+    { id: "templates", label: "Message Templates", icon: "✉", tooltip: "Pre-written email and social templates for affiliates to copy and customize." },
     { id: "conversions", label: "Conversion Status", icon: "◉", tooltip: "A conversion is recorded when a customer makes a purchase through the affiliate's link. Approve and mark paid here." },
     { id: "affiliates", label: "Affiliates", icon: "◈", tooltip: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats." },
     { id: "import", label: "Import Affiliates", icon: "⬇", tooltip: "Import affiliates from CSV, paste, TapAffiliate, GoAffPro, or Tune." },
@@ -1006,6 +1008,7 @@ export default function Page() {
                 {tab === "conversions" && "Conversion Status"}
                 {tab === "affiliates" && "Affiliates"}
                 {tab === "import" && "Import Affiliates"}
+                {tab === "templates" && "Message Templates"}
                 {tab === "mlm" && "MLM Network Tree"}
                 {tab === "leaderboard" && "Leaderboard"}
                 {tab === "payouts" && "Payout Overview"}
@@ -1690,6 +1693,8 @@ export default function Page() {
           )}
 
           {!loading && tab === "import" && <ImportAffiliatesTab onImport={fetchAffiliates} />}
+
+          {!loading && tab === "templates" && <MessageTemplatesTab />}
 
           {!loading && tab === "announcements" && (
             <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, overflow: "hidden" }}>

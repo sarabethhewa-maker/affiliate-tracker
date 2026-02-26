@@ -170,3 +170,15 @@ model FraudFlag {
   createdAt    DateTime  @default(now())
   affiliate    Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 }
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  category  String   // email | social-instagram | social-facebook | social-tiktok | social-twitter | text-message | other
+  subject   String?  // for email templates
+  body      String
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

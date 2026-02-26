@@ -19,6 +19,7 @@ const THEME = {
 const navItems = [
   { href: "/portal/dashboard", label: "Dashboard" },
   { href: "/portal/links", label: "My Links" },
+  { href: "/portal/templates", label: "Templates" },
   { href: "/portal/earnings", label: "Earnings" },
   { href: "/portal/team", label: "My Team" },
   { href: "/portal/payouts", label: "Payouts" },
