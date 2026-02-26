@@ -31,6 +31,9 @@ type ImportRow = {
   notes?: string;
 };
 
+/** Column mapping: ImportRow keys or "skip" (exclude column from import). */
+type ColumnMapping = keyof ImportRow | "skip";
+
 type ImportLogEntry = {
   id: string;
   method: string;
@@ -128,7 +131,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   ];
 
   const mapCsvToRows = useCallback((): ImportRow[] => {
-    const fieldToKey: Record<string, keyof ImportRow | "skip"> = {
+    const fieldToKey: Record<string, ColumnMapping> = {
       Name: "name",
       Email: "email",
       Tier: "tier",
