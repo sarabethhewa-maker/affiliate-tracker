@@ -7,13 +7,14 @@ import html2canvas from "html2canvas";
 import { setOnboardingCopiedLink, setOnboardingVisitedLinks } from "../OnboardingChecklist";
 
 const THEME = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  accent: "#38bdf8",
-  success: "#4ade80",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  border: "#e2e8f0",
+  text: "#1a1a1a",
+  textMuted: "#4a5568",
+  accent: "#1e3a5f",
+  accentLight: "#3a7ca5",
+  success: "#0d7a3d",
 };
 
 type MeResponse = {
@@ -87,7 +88,7 @@ export default function PortalLinksPage() {
     if (!shareCardRef.current) return;
     setAssetDownloading(true);
     try {
-      const canvas = await html2canvas(shareCardRef.current, { scale: 2, useCORS: true, backgroundColor: "#0f172a" });
+      const canvas = await html2canvas(shareCardRef.current, { scale: 2, useCORS: true, backgroundColor: "#f8fafc" });
       const a = document.createElement("a");
       a.download = "biolongevitylabs-affiliate-card.png";
       a.href = canvas.toDataURL("image/png");
@@ -121,7 +122,7 @@ export default function PortalLinksPage() {
         <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Share this link with customers. When they click and buy, you get credit.</p>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
           <code style={{ flex: 1, minWidth: 200, padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 13, wordBreak: "break-all" }}>{trackingLink}</code>
-          <button type="button" onClick={() => { copyToClipboard(trackingLink, setCopiedTrack); setOnboardingCopiedLink(); }} style={{ padding: "10px 16px", background: copiedTrack ? THEME.success : THEME.accent, color: "#0f172a", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+          <button type="button" onClick={() => { copyToClipboard(trackingLink, setCopiedTrack); setOnboardingCopiedLink(); }} style={{ padding: "10px 16px", background: copiedTrack ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
             {copiedTrack ? "Copied" : "Copy"}
           </button>
         </div>
@@ -131,7 +132,7 @@ export default function PortalLinksPage() {
             <QRCode value={trackingLink} size={200} level="M" />
           </div>
           <div style={{ marginTop: 12 }}>
-            <button type="button" onClick={downloadQR} style={{ padding: "10px 20px", background: THEME.accent, color: "#0f172a", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
+            <button type="button" onClick={downloadQR} style={{ padding: "10px 20px", background: THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
               Download QR code (PNG)
             </button>
           </div>
@@ -144,7 +145,7 @@ export default function PortalLinksPage() {
           <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Share with people who want to join as affiliates. They’ll be linked to your team.</p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <code style={{ flex: 1, minWidth: 200, padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 13, wordBreak: "break-all" }}>{recruitLink}</code>
-            <button type="button" onClick={() => copyToClipboard(recruitLink, setCopiedRecruit)} style={{ padding: "10px 16px", background: copiedRecruit ? THEME.success : THEME.accent, color: "#0f172a", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+            <button type="button" onClick={() => copyToClipboard(recruitLink, setCopiedRecruit)} style={{ padding: "10px 16px", background: copiedRecruit ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
               {copiedRecruit ? "Copied" : "Copy"}
             </button>
           </div>
@@ -181,10 +182,10 @@ export default function PortalLinksPage() {
           <div style={{ fontSize: 14, fontWeight: 600, color: THEME.accent }}>Earn {commissionPct}% commission on every sale</div>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
-          <button type="button" onClick={downloadShareCard} disabled={assetDownloading} style={{ padding: "10px 20px", background: assetDownloading ? THEME.border : THEME.accent, color: "#0f172a", border: "none", borderRadius: 8, fontWeight: 600, cursor: assetDownloading ? "not-allowed" : "pointer", fontSize: 14 }}>
+          <button type="button" onClick={downloadShareCard} disabled={assetDownloading} style={{ padding: "10px 20px", background: assetDownloading ? THEME.border : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: assetDownloading ? "not-allowed" : "pointer", fontSize: 14 }}>
             {assetDownloading ? "Generating…" : "Download image"}
           </button>
-          <button type="button" onClick={() => { copyToClipboard(shareCaption, setCopiedCaption); }} style={{ padding: "10px 20px", background: copiedCaption ? THEME.success : THEME.card, color: copiedCaption ? "#0f172a" : THEME.text, border: `1px solid ${THEME.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
+          <button type="button" onClick={() => { copyToClipboard(shareCaption, setCopiedCaption); }} style={{ padding: "10px 20px", background: copiedCaption ? THEME.success : THEME.card, color: copiedCaption ? "#fff" : THEME.text, border: `1px solid ${THEME.border}`, borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 14 }}>
             {copiedCaption ? "Copied caption!" : "Copy caption"}
           </button>
         </div>

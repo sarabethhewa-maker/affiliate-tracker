@@ -29,6 +29,13 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Admin dashboard
+
+The root URL `/` is the admin dashboard (affiliates, conversions, settings). Only users whose email is listed as admin can access it.
+
+- **First time / no admins yet:** Set `FIRST_ADMIN_EMAIL=your@email.com` in `.env.local` (use the same email as your Clerk login). You can then open the dashboard and add admin emails in **Settings → Admin emails**.
+- **After that:** Use **Settings → Admin emails** (comma-separated) or **Admin notification email**. Only those addresses can open `/` and Settings.
+
 ## WooCommerce integration
 
 Add these to `.env.local` (and optionally configure the same in Settings → WooCommerce):

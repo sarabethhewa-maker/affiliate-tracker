@@ -5,14 +5,14 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 
 const THEME = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  accent: "#38bdf8",
-  success: "#4ade80",
-  warning: "#fbbf24",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  border: "#e2e8f0",
+  text: "#1a1a1a",
+  textMuted: "#4a5568",
+  accent: "#1e3a5f",
+  success: "#0d7a3d",
+  warning: "#b45309",
 };
 
 const STORAGE_KEYS = {
@@ -62,10 +62,10 @@ export default function OnboardingChecklist({ children }: { children: React.Reac
 
   const steps = [
     { id: "account", label: "Account created", done: accountCreated, href: null },
-    { id: "link", label: "Copy your tracking link", done: copiedLink, href: "/portal" },
+    { id: "link", label: "Copy your tracking link", done: copiedLink, href: "/portal/dashboard" },
     { id: "payout", label: "Set up your payout method", done: payoutSetup, href: "/api/me/tipalti-onboarding" },
     { id: "share", label: "Make your first share", done: visitedLinks, href: "/portal/links" },
-    { id: "recruit", label: "Recruit your first sub-affiliate", done: firstRecruit, href: "/portal" },
+    { id: "recruit", label: "Recruit your first sub-affiliate", done: firstRecruit, href: "/portal/dashboard" },
   ];
 
   const completed = steps.filter((s) => s.done).length;
@@ -142,9 +142,9 @@ export default function OnboardingChecklist({ children }: { children: React.Reac
                   <span style={{ flex: 1, color: s.done ? THEME.textMuted : THEME.text, fontSize: 14 }}>{s.label}</span>
                   {!s.done && s.href && (
                     s.href.startsWith("http") || s.href.startsWith("/api/") ? (
-                      <a href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#0f172a", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</a>
+                      <a href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</a>
                     ) : (
-                      <Link href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#0f172a", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</Link>
+                      <Link href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</Link>
                     )
                   )}
                 </li>
@@ -163,7 +163,7 @@ export default function OnboardingChecklist({ children }: { children: React.Reac
             <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: THEME.text, marginBottom: 8 }}>You’re all set!</h2>
             <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 24 }}>You’ve completed the onboarding checklist. Start sharing your links and growing your team.</p>
-            <button type="button" onClick={() => { setShowCongrats(false); setCongratsDone(true); }} style={{ padding: "12px 24px", background: THEME.success, color: "#0f172a", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+            <button type="button" onClick={() => { setShowCongrats(false); setCongratsDone(true); }} style={{ padding: "12px 24px", background: THEME.success, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
               Continue
             </button>
           </div>

@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  accent: "#38bdf8",
-  success: "#4ade80",
-  warning: "#fbbf24",
-  warningBg: "#422006",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  border: "#e2e8f0",
+  text: "#1a1a1a",
+  textMuted: "#4a5568",
+  accent: "#1e3a5f",
+  success: "#0d7a3d",
+  warning: "#b45309",
+  warningBg: "#fef3c7",
 };
 
 type MeResponse = {
@@ -60,7 +60,7 @@ export default function PortalPayoutsPage() {
         <div style={{ background: THEME.warningBg, border: `1px solid ${THEME.warning}`, borderRadius: 12, padding: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: THEME.text }}>Set up banking</h2>
           <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 16 }}>Complete your payment profile to receive payouts.</p>
-          <a href="/api/me/tipalti-onboarding" style={{ display: "inline-block", padding: "10px 20px", background: THEME.warning, color: "#0f172a", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 14 }}>Complete setup →</a>
+          <a href="/api/me/tipalti-onboarding" style={{ display: "inline-block", padding: "10px 20px", background: THEME.warning, color: "#1a1a1a", borderRadius: 8, fontWeight: 600, textDecoration: "none", fontSize: 14 }}>Complete setup →</a>
         </div>
       )}
 

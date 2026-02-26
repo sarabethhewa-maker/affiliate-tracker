@@ -41,21 +41,28 @@ export async function POST(
     include: { clicks: true, conversions: true, children: true, payouts: true },
   });
 
+  const settings = await getSettings();
   const origin = req.headers.get('origin') || req.nextUrl.origin;
   const salesLink = `${origin}/api/ref/${updated.id}`;
   const recruitLink = `${origin}/join?ref=${updated.referralCode}`;
+  const portalUrl = `${origin}/portal`;
+  const tierIndex = parseInt(updated.tier, 10) || 0;
+  const tierName = settings.tiers[tierIndex]?.name ?? 'Silver';
+  const commissionRate = settings.tiers[tierIndex]?.commission ?? 10;
   try {
-    await sendAffiliateWelcome(updated.name, updated.email, salesLink, recruitLink);
+    await sendAffiliateWelcome(updated.name, updated.email, salesLink, recruitLink, {
+      tierName,
+      commissionRate,
+      portalUrl,
+    });
   } catch {
     // non-blocking
   }
 
-  const settings = await getSettings();
-  const tierIndex = parseInt(updated.tier, 10) || 0;
-  const tierName = settings.tiers[tierIndex]?.name ?? 'Silver';
+  const tierLabel = settings.tiers[tierIndex]?.name ?? 'Silver';
   await logActivity({
     type: 'affiliate_approved',
-    message: `${updated.name} joined as a ${tierName} affiliate`,
+    message: `${updated.name} joined as a ${tierLabel} affiliate`,
     affiliateId: updated.id,
   });
 

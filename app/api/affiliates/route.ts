@@ -3,15 +3,23 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
-  const err = await requireAdmin();
-  if (err) return err;
+  try {
+    const err = await requireAdmin();
+    if (err) return err;
 
-  const affiliates = await prisma.affiliate.findMany({
-    include: { clicks: true, conversions: true, children: true, payouts: true },
-    orderBy: { createdAt: 'desc' },
-  });
+    const affiliates = await prisma.affiliate.findMany({
+      include: { clicks: true, conversions: true, children: true, payouts: true },
+      orderBy: { createdAt: 'desc' },
+    });
 
-  return NextResponse.json(affiliates);
+    return NextResponse.json(affiliates);
+  } catch (e) {
+    console.error('[api/affiliates] GET', e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'Server error' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {

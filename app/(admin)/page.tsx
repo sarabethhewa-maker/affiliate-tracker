@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Tooltip from "../components/Tooltip";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
@@ -53,9 +54,13 @@ type Affiliate = {
   state?: string | null;
   referralCode?: string | null;
   parentId: string | null;
+  phone?: string | null;
+  socialHandle?: string | null;
+  howDidYouHear?: string | null;
   tipaltiPayeeId?: string | null;
   tipaltiStatus?: string | null;
   notes?: string | null;
+  parent?: Affiliate | null;
   children: Affiliate[];
   clicks: { id: string; createdAt?: string }[];
   conversions: { id: string; amount: number; status?: string; product?: string | null; createdAt: string }[];
@@ -185,7 +190,31 @@ function HowToUseContent({ theme }: { theme: typeof THEME }) {
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>💳</span> Paying Affiliates</h2>
-        <p style={body}>On the <strong>Payouts</strong> tab you see unpaid vs paid balance per affiliate. Click <strong>Pay Now</strong> to open a modal: amount is pre-filled, choose payment method (PayPal, Venmo/Zelle, Bank Transfer), add a reference, then Confirm. The payout is recorded and approved conversions are marked paid.</p>
+        <p style={body}>On the <strong>Payouts</strong> tab you see unpaid vs paid balance per affiliate. Click <strong>Pay Now</strong> to open a modal: amount is pre-filled, choose payment method (PayPal, Venmo/Zelle, Bank Transfer, Tipalti), add a reference, then Confirm. The payout is recorded and approved conversions are marked paid.</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>🛒</span> WooCommerce</h2>
+        <p style={body}>Connect your store in <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → WooCommerce</Link></strong>: Store URL, Consumer Key, Consumer Secret. Test Connection, then Manual Sync. For automation, create an <strong>Order updated</strong> webhook in WooCommerce pointing to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/woocommerce</code> and set <code>WOOCOMMERCE_WEBHOOK_SECRET</code>. Orders become conversions and tiers recalculate automatically.</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>💸</span> Tipalti</h2>
+        <p style={body}>In <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Tipalti</Link></strong> add API Key and Payer Name. Use Tipalti Invite from the Affiliates tab so affiliates complete payment onboarding. Pay via Tipalti or Mass Payout from the Payouts tab. Configure the Tipalti webhook to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>/api/webhooks/tipalti</code> for payment status updates.</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>📧</span> Email Marketing (Klaviyo / Mailchimp)</h2>
+        <p style={body}>In <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Email Marketing</Link></strong> choose Klaviyo or Mailchimp, enter API key and List ID (and Mailchimp server prefix). Test Connection, then Sync All Affiliates. Syncing also runs automatically when you approve an affiliate, when their tier changes, and when a payout is sent.</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>📬</span> Weekly Email Digest</h2>
+        <p style={body}>Runs every Monday at 8:00; sent to admin email(s) in Settings. Includes revenue vs last week, new affiliates, top performers, commissions owed, tier upgrades. Set Admin email in Settings → Program Settings. Use Send test digest in Settings → Weekly email digest. Requires Resend (<code>RESEND_API_KEY</code>, <code>RESEND_FROM_EMAIL</code>).</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>🔐</span> Admin Access</h2>
+        <p style={body}>Only emails in <strong><Link href="/settings" style={{ color: theme.accent }}>Settings → Admin emails</Link></strong> (or Admin notification email) can open the admin dashboard. First-time: set <code>FIRST_ADMIN_EMAIL=your@email.com</code> in .env.local, then add your email in Settings. Use <strong>Affiliate dashboard</strong> (top right) to open /portal; affiliates see Admin dashboard in the portal header.</p>
+      </div>
+      <div style={card}>
+        <h2 style={heading}><span style={{ fontSize: 20 }}>👤</span> Affiliate Portal</h2>
+        <p style={body}>Approved affiliates go to <strong>/portal</strong> (Clerk sign-in). They see dashboard, links, earnings, team, payouts. Use <strong>View as Affiliate</strong> on an affiliate card or <code>/portal?preview=affiliateId</code> to preview.</p>
       </div>
       <div style={card}>
         <h2 style={heading}><span style={{ fontSize: 20 }}>❓</span> FAQs</h2>
@@ -200,6 +229,12 @@ function HowToUseContent({ theme }: { theme: typeof THEME }) {
           <p style={faqA}>Use Pay Now on the Payouts tab (marks approved conversions as paid and records the payout), or in Conversion Status click &quot;Mark paid&quot; on individual approved conversions.</p>
           <p style={faqQ}>Can I see who recruited who?</p>
           <p style={faqA}>Yes. Open the MLM Tree tab for a visual hierarchy, or on the Affiliates tab each card shows &quot;Referred by [name]&quot; and &quot;Signed up N referrals.&quot;</p>
+          <p style={faqQ}>How do WooCommerce orders become conversions?</p>
+          <p style={faqA}>Set up the Order updated webhook to /api/webhooks/woocommerce. Completed orders create conversions and tiers recalculate. You can also run Manual Sync from Settings → WooCommerce.</p>
+          <p style={faqQ}>How do I use Tipalti for payouts?</p>
+          <p style={faqA}>Add API key and payer name in Settings. Invite affiliates via Tipalti Invite, then use Pay via Tipalti or Mass Payout. Configure the Tipalti webhook for status updates.</p>
+          <p style={faqQ}>How does email marketing sync work?</p>
+          <p style={faqA}>Choose Klaviyo or Mailchimp in Settings → Email Marketing and enter credentials. Sync runs on approve, tier change, and payout; or use Sync All Affiliates anytime.</p>
         </div>
       </div>
     </div>
@@ -246,7 +281,8 @@ function MLMTree({ affiliates, rootId = null, depth = 0, TIERS, getVolumeTier }:
 export default function Page() {
   const { settings, TIERS, getVolumeTier } = useSettings();
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [tab, setTab] = useState("how-to-use");
+  const [tab, setTab] = useState("dashboard");
+  const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", tier: "0", parentId: "", state: "" });
@@ -284,6 +320,8 @@ export default function Page() {
   const [leaderboardMode, setLeaderboardMode] = useState<"month" | "all" | "recruits">("month");
   const [calcSales, setCalcSales] = useState(5000);
   const [calcShareCopied, setCalcShareCopied] = useState(false);
+  const [rejectConfirm, setRejectConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [rejectSendEmail, setRejectSendEmail] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -319,30 +357,68 @@ export default function Page() {
 
   const fetchAffiliates = async () => {
     setLoading(true);
-    const res = await fetch("/api/affiliates");
-    const data = await res.json();
-    setAffiliates(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/affiliates");
+      const text = await res.text();
+      let data: unknown;
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch {
+        data = [];
+      }
+      if (!res.ok) {
+        console.error("[api/affiliates]", (data as { error?: string })?.error ?? res.status);
+        setAffiliates([]);
+      } else {
+        setAffiliates(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error("[api/affiliates]", e);
+      setAffiliates([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchActivity = useCallback(async () => {
-    const res = await fetch("/api/activity");
-    if (res.ok) {
-      const data = await res.json();
+    try {
+      const res = await fetch("/api/activity");
+      const text = await res.text();
+      if (!res.ok) return;
+      let data: unknown;
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch {
+        return;
+      }
       setActivityLogs(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore
     }
   }, []);
 
   const fetchConversions = useCallback(async () => {
     setConvLoading(true);
-    const params = new URLSearchParams();
-    if (convStatus) params.set("status", convStatus);
-    if (convDateFrom) params.set("from", convDateFrom);
-    if (convDateTo) params.set("to", convDateTo);
-    const res = await fetch("/api/conversions?" + params.toString());
-    const data = await res.json();
-    setConversions(Array.isArray(data) ? data : []);
-    setConvLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (convStatus) params.set("status", convStatus);
+      if (convDateFrom) params.set("from", convDateFrom);
+      if (convDateTo) params.set("to", convDateTo);
+      const res = await fetch("/api/conversions?" + params.toString());
+      const text = await res.text();
+      let data: unknown;
+      try {
+        data = text ? JSON.parse(text) : [];
+      } catch {
+        data = [];
+      }
+      if (res.ok) setConversions(Array.isArray(data) ? data : []);
+      else setConversions([]);
+    } catch {
+      setConversions([]);
+    } finally {
+      setConvLoading(false);
+    }
   }, [convStatus, convDateFrom, convDateTo]);
 
   useEffect(() => { fetchAffiliates(); }, []);
@@ -407,8 +483,19 @@ export default function Page() {
     fetchAffiliates();
   };
 
-  const rejectAffiliate = async (id: string) => {
-    await fetch("/api/affiliates/" + id + "/reject", { method: "POST" });
+  const rejectAffiliate = (id: string, name: string) => {
+    setRejectConfirm({ id, name });
+    setRejectSendEmail(false);
+  };
+
+  const confirmRejectAffiliate = async () => {
+    if (!rejectConfirm) return;
+    await fetch("/api/affiliates/" + rejectConfirm.id + "/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sendEmail: rejectSendEmail }),
+    });
+    setRejectConfirm(null);
     fetchAffiliates();
   };
 
@@ -509,16 +596,18 @@ export default function Page() {
     return d.toLocaleDateString();
   };
 
+  const SETTINGS_ACTIVE = pathname === "/settings";
   const NAV = [
-    { id: "how-to-use", label: "How to Use", icon: "?", tooltip: "Quick guide: getting started, tiers, MLM, links, sales, payouts, and public signup." },
+    { id: "settings", label: "Settings & Customization", icon: "⚙", href: "/settings", isLink: true as const, tooltip: "Program settings, tiers, Tipalti, WooCommerce, email marketing, and admin emails." },
     { id: "dashboard", label: "Dashboard", icon: "▦", tooltip: "Your overview. See total revenue, clicks, conversions and top performers at a glance." },
     { id: "conversions", label: "Conversion Status", icon: "◉", tooltip: "A conversion is recorded when a customer makes a purchase through the affiliate's link. Approve and mark paid here." },
     { id: "affiliates", label: "Affiliates", icon: "◈", tooltip: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats." },
     { id: "mlm", label: "MLM Tree", icon: "⋔", tooltip: "Shows the full network of who recruited who. Each level earns a smaller override commission." },
-    { id: "leaderboard", label: "Leaderboard", icon: "🏆", tooltip: "Top affiliates by sales this month. Gold, silver, bronze for top 3." },
     { id: "payouts", label: "Payouts", icon: "◎", tooltip: "Track what each affiliate has earned and log when you've paid them." },
-    { id: "calculator", label: "Calculator", icon: "🧮", tooltip: "Estimate earnings by sales volume and recruits." },
+    { id: "leaderboard", label: "Leaderboard", icon: "🏆", tooltip: "Top affiliates by sales this month. Gold, silver, bronze for top 3." },
     { id: "states", label: "By State", icon: "▤", tooltip: "Breakdown of affiliates by state. Flagged if a state has more than 2 Master affiliates." },
+    { id: "calculator", label: "Calculator", icon: "🧮", tooltip: "Estimate earnings by sales volume and recruits." },
+    { id: "how-to-use", label: "How to Use", icon: "?", tooltip: "Quick guide: getting started, tiers, MLM, links, sales, payouts, and public signup." },
   ];
 
   const pendingAffiliates = affiliates.filter(a => a.status === "pending");
@@ -681,6 +770,23 @@ export default function Page() {
         </div>
       )}
 
+      {rejectConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} onClick={() => setRejectConfirm(null)}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, maxWidth: 400, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, marginBottom: 12 }}>Reject application?</h3>
+            <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 16 }}>Are you sure you want to reject {rejectConfirm.name}? Their status will be set to rejected.</p>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, cursor: "pointer", fontSize: 14, color: THEME.text }}>
+              <input type="checkbox" checked={rejectSendEmail} onChange={e => setRejectSendEmail(e.target.checked)} />
+              Send a polite rejection email
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setRejectConfirm(null)} style={{ padding: "8px 16px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 6, color: THEME.text, cursor: "pointer", fontSize: 13 }}>Cancel</button>
+              <button onClick={confirmRejectAffiliate} style={{ padding: "8px 16px", background: THEME.error, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Reject</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -717,18 +823,34 @@ export default function Page() {
             <div style={{ color: THEME.textMuted, fontSize: 10, letterSpacing: 1 }}>AFFILIATEOS · TRACKING</div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4 }} data-tour="nav">
-            {NAV.map(n => (
-              <button key={n.id} onClick={() => { setTab(n.id); if (isMobile) setSidebarOpen(false); }} data-tour={n.id === "dashboard" ? "nav-dashboard" : n.id === "affiliates" ? "nav-affiliates" : n.id === "mlm" ? "nav-mlm" : n.id === "payouts" ? "nav-payouts" : undefined}
-                className="admin-touch-btn"
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: tab === n.id ? "#e0f2fe" : "none", border: tab === n.id ? `1px solid ${THEME.accentLight}` : "1px solid transparent", color: tab === n.id ? THEME.accent : THEME.textMuted, cursor: "pointer", fontSize: 13, fontWeight: tab === n.id ? 700 : 400, textAlign: "left" as const, minHeight: 44 }}>
-                <span style={{ fontSize: 16 }}>{n.icon}</span> {n.label}
-                <Tooltip text={n.tooltip} />
-              </button>
-            ))}
+            {NAV.map(n => {
+              const isSettingsLink = "isLink" in n && n.isLink && "href" in n && n.href;
+              const isActive = isSettingsLink ? SETTINGS_ACTIVE : tab === n.id;
+              const purpleBg = "#ede9fe";
+              const purpleBorder = "#a78bfa";
+              const purpleText = "#6d28d9";
+              if (isSettingsLink && "href" in n) {
+                return (
+                  <Link key={n.id} href={n.href} className="admin-touch-btn" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: purpleBg, border: `1px solid ${purpleBorder}`, color: purpleText, cursor: "pointer", fontSize: 13, fontWeight: 700, textAlign: "left" as const, minHeight: 44, textDecoration: "none" }}>
+                    <span style={{ fontSize: 16, width: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n.icon}</span>
+                    <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
+                    <Tooltip text={n.tooltip} />
+                  </Link>
+                );
+              }
+              return (
+                <button key={n.id} onClick={() => { setTab(n.id); if (isMobile) setSidebarOpen(false); }} data-tour={n.id === "dashboard" ? "nav-dashboard" : n.id === "affiliates" ? "nav-affiliates" : n.id === "mlm" ? "nav-mlm" : n.id === "payouts" ? "nav-payouts" : undefined}
+                  className="admin-touch-btn"
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 8, background: isActive ? "#e0f2fe" : "none", border: isActive ? `1px solid ${THEME.accentLight}` : "1px solid transparent", color: isActive ? THEME.accent : THEME.textMuted, cursor: "pointer", fontSize: 13, fontWeight: isActive ? 700 : 400, textAlign: "left" as const, minHeight: 44 }}>
+                  <span style={{ fontSize: 16, width: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{n.icon}</span>
+                  <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
+                  <Tooltip text={n.tooltip} />
+                </button>
+              );
+            })}
           </nav>
         </div>
         <div style={{ marginTop: "auto", padding: 20, borderTop: `1px solid ${THEME.border}` }}>
-          <Link href="/settings" style={{ display: "block", color: THEME.textMuted, fontSize: 12, marginBottom: 8, textDecoration: "none" }}>Settings</Link>
           <Link href="/how-to-use" style={{ display: "block", color: THEME.textMuted, fontSize: 12, marginBottom: 12, textDecoration: "none" }}>How to Use (full page)</Link>
           <div style={{ color: THEME.textMuted, fontSize: 10, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" as const }}>Active</div>
           <div style={{ color: THEME.accentLight, fontFamily: "monospace", fontSize: 22, fontWeight: 700 }}>{affiliates.filter(a => a.status === "active").length}</div>
@@ -767,6 +889,7 @@ export default function Page() {
               <div style={{ color: THEME.textMuted, fontSize: 13 }}>Affiliate Program</div>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <Link href="/portal" style={{ minHeight: 44, padding: "10px 16px", background: "transparent", border: `1px solid ${THEME.accent}`, borderRadius: 8, color: THEME.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Affiliate dashboard</Link>
               <button type="button" onClick={() => setSearchOpen(true)} className="admin-touch-btn" style={{ minHeight: 44, padding: "10px 14px", background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, fontSize: 12, cursor: "pointer" }} title="Quick search (⌘K)">⌘K</button>
               {tab === "conversions" && (
                 <button onClick={() => setShowLogSale(true)} className="admin-touch-btn"
@@ -900,7 +1023,7 @@ export default function Page() {
                       <span style={{ color: THEME.text }}>{a.name}</span>
                       <span style={{ color: THEME.textMuted, fontSize: 12 }}>{a.email}</span>
                       <button onClick={() => approveAffiliate(a.id)} style={{ padding: "4px 10px", background: "#1a3a20", border: "none", borderRadius: 4, color: "#3a8a5a", cursor: "pointer", fontSize: 11 }}>Approve</button>
-                      <button onClick={() => rejectAffiliate(a.id)} style={{ padding: "4px 10px", background: "#2a1a1a", border: "none", borderRadius: 4, color: "#8a5a5a", cursor: "pointer", fontSize: 11 }}>Reject</button>
+                      <button onClick={() => rejectAffiliate(a.id, a.name)} style={{ padding: "4px 10px", background: "#2a1a1a", border: "none", borderRadius: 4, color: "#8a5a5a", cursor: "pointer", fontSize: 11 }}>Reject</button>
                     </div>
                   ))}
                 </div>
@@ -981,15 +1104,30 @@ export default function Page() {
             <>
               {pendingAffiliates.length > 0 && (
                 <div style={{ background: THEME.warningBg, border: `1px solid ${THEME.warning}60`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
-                  <div style={{ color: THEME.warning, fontSize: 12, fontWeight: 700, marginBottom: 12 }}>Pending Approvals ({pendingAffiliates.length}) — approve to send welcome email & links; reject removes the application</div>
-                  {pendingAffiliates.map(a => (
-                    <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: `1px solid ${THEME.border}`, flexWrap: "wrap" as const }}>
-                      <span style={{ color: THEME.text, fontWeight: 600 }}>{a.name}</span>
-                      <span style={{ color: THEME.textMuted, fontSize: 12 }}>{a.email}</span>
-                      <button onClick={() => approveAffiliate(a.id)} style={{ padding: "6px 12px", background: THEME.successBg, border: "none", borderRadius: 6, color: THEME.success, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
-                      <button onClick={() => rejectAffiliate(a.id)} style={{ padding: "6px 12px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 11 }}>Reject</button>
-                    </div>
-                  ))}
+                  <div style={{ color: THEME.warning, fontSize: 12, fontWeight: 700, marginBottom: 12 }}>Pending Applications ({pendingAffiliates.length})</div>
+                  <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 16 }}>Approve to send welcome email & links; reject sets status to rejected (optionally send rejection email).</p>
+                  {pendingAffiliates.map(a => {
+                    const referrer = a.parentId ? affiliates.find(x => x.id === a.parentId) : null;
+                    return (
+                      <div key={a.id} style={{ padding: "14px 0", borderBottom: `1px solid ${THEME.border}`, flexWrap: "wrap" as const }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ color: THEME.text, fontWeight: 700, fontSize: 14 }}>{a.name}</span>
+                          <span style={{ color: THEME.textMuted, fontSize: 12 }}>{a.email}</span>
+                          {a.phone && <span style={{ color: THEME.textMuted, fontSize: 12 }}>· {a.phone}</span>}
+                          {a.socialHandle && <span style={{ color: THEME.textMuted, fontSize: 12 }}>· {a.socialHandle}</span>}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 12, color: THEME.textMuted, marginBottom: 10 }}>
+                          {a.howDidYouHear && <span>How they heard: <strong style={{ color: THEME.text }}>{a.howDidYouHear}</strong></span>}
+                          {referrer && <span>Referred by: <strong style={{ color: THEME.text }}>{referrer.name}</strong> {referrer.referralCode && <span>({referrer.referralCode})</span>}</span>}
+                          <span>Applied: {new Date(a.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => approveAffiliate(a.id)} style={{ padding: "6px 14px", background: THEME.success, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Approve</button>
+                          <button onClick={() => rejectAffiliate(a.id, a.name)} style={{ padding: "6px 14px", background: THEME.error, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontSize: 12 }}>Reject</button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
               <input placeholder="Search affiliates..." value={search} onChange={e => setSearch(e.target.value)}
@@ -1104,11 +1242,11 @@ export default function Page() {
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                           <button onClick={() => copyLink(aff.id)} style={{ background: copied === aff.id ? THEME.successBg : "#dbeafe", border: `1px solid ${copied === aff.id ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copied === aff.id ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copied === aff.id ? "✓ Copied" : "Sales link"}</button>
                           {recruitLink && <button onClick={() => copyRecruitLink(aff.referralCode!)} style={{ background: copiedRecruit === aff.referralCode ? THEME.successBg : "#dbeafe", border: `1px solid ${copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copiedRecruit === aff.referralCode ? "✓ Copied" : "Recruit link"}</button>}
-                          <Link href={`/portal?preview=${aff.id}`} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", background: "#ede9fe", border: "1px solid #6d28d9", borderRadius: 6, color: "#6d28d9", cursor: "pointer", fontSize: 11, textDecoration: "none" }}>View as Affiliate</Link>
+                          <Link href={`/portal/dashboard?preview=${aff.id}`} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", background: "#ede9fe", border: "1px solid #6d28d9", borderRadius: 6, color: "#6d28d9", cursor: "pointer", fontSize: 11, textDecoration: "none" }}>View as Affiliate</Link>
                           {aff.status === "pending" && (
                             <>
                               <button onClick={() => approveAffiliate(aff.id)} style={{ padding: "6px 12px", background: THEME.successBg, border: "none", borderRadius: 6, color: THEME.success, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
-                              <button onClick={() => rejectAffiliate(aff.id)} style={{ padding: "6px 12px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 11 }}>Reject</button>
+                              <button onClick={() => rejectAffiliate(aff.id, aff.name)} style={{ padding: "6px 12px", background: THEME.errorBg, border: "none", borderRadius: 6, color: THEME.error, cursor: "pointer", fontSize: 11 }}>Reject</button>
                             </>
                           )}
                         </div>

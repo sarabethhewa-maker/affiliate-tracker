@@ -5,16 +5,17 @@ import { getSettings, getTierIndexForRevenue } from '@/lib/settings';
 import { isAdmin } from '@/lib/settings';
 
 export async function GET(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  try {
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress;
-  if (!email) return NextResponse.json({ pending: true, message: 'No email on account' }, { status: 200 });
+    const user = await currentUser();
+    const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress;
+    if (!email) return NextResponse.json({ pending: true, message: 'No email on account' }, { status: 200 });
 
-  const url = new URL(req.url);
-  const previewId = url.searchParams.get('preview');
-  const settings = await getSettings();
+    const url = new URL(req.url);
+    const previewId = url.searchParams.get('preview');
+    const settings = await getSettings();
 
   let affiliate: Awaited<ReturnType<typeof loadAffiliate>> | null = null;
 
@@ -27,7 +28,23 @@ export async function GET(req: NextRequest) {
   }
 
   if (!affiliate) {
-    return NextResponse.json({ pending: true, message: 'Your account is pending approval' }, { status: 200 });
+    return NextResponse.json({ noApplication: true, email }, { status: 200 });
+  }
+
+  if (affiliate.status === 'pending') {
+    return NextResponse.json({
+      pending: true,
+      message: 'Your application is under review',
+      applicationDetails: {
+        name: affiliate.name,
+        email: affiliate.email,
+        createdAt: affiliate.createdAt,
+      },
+    }, { status: 200 });
+  }
+
+  if (affiliate.status === 'rejected') {
+    return NextResponse.json({ rejected: true, email }, { status: 200 });
   }
 
   const now = new Date();
@@ -97,6 +114,13 @@ export async function GET(req: NextRequest) {
     totalEarned,
     pendingPayout,
   });
+  } catch (e) {
+    console.error('[api/me/affiliate]', e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'Server error' },
+      { status: 500 }
+    );
+  }
 }
 
 async function loadAffiliate(id: string) {

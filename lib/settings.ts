@@ -69,8 +69,37 @@ const SETTINGS_KEYS = {
   emailMarketingSyncedCount: 'emailMarketingSyncedCount',
 } as const;
 
+function getDefaultSettings(): AppSettings {
+  return {
+    tiers: [...DEFAULT_TIERS],
+    programName: DEFAULT_PROGRAM_NAME,
+    websiteUrl: DEFAULT_WEBSITE_URL,
+    adminEmail: '',
+    adminEmails: '',
+    cookieDurationDays: DEFAULT_COOKIE_DAYS,
+    wcStoreUrl: '',
+    wcConsumerKey: '',
+    wcConsumerSecret: '',
+    tipaltiApiKey: '',
+    tipaltiPayerName: '',
+    tipaltiSandbox: true,
+    emailMarketingPlatform: 'none',
+    klaviyoApiKey: '',
+    klaviyoAffiliateListId: '',
+    mailchimpApiKey: '',
+    mailchimpServerPrefix: '',
+    mailchimpAffiliateListId: '',
+    emailMarketingLastSyncAt: '',
+    emailMarketingSyncedCount: '0',
+  };
+}
+
 export async function getSettings(): Promise<AppSettings> {
-  const rows = await prisma.settings.findMany();
+  const settingsDelegate = prisma.settings;
+  if (!settingsDelegate?.findMany) {
+    return getDefaultSettings();
+  }
+  const rows = await settingsDelegate.findMany();
   const map = new Map(rows.map((r) => [r.key, r.value]));
 
   const tiersRaw = map.get(SETTINGS_KEYS.tiers);
@@ -148,6 +177,12 @@ export async function isAdmin(email: string | undefined | null): Promise<boolean
     if (list.includes(normalized)) return true;
   }
   if (settings.adminEmail && settings.adminEmail.trim().toLowerCase() === normalized) return true;
+  // Bootstrap: when no admin is set in Settings yet, allow FIRST_ADMIN_EMAIL or ADMIN_EMAIL from env
+  const noAdminConfigured = !settings.adminEmails?.trim() && !settings.adminEmail?.trim();
+  if (noAdminConfigured) {
+    const bootstrap = (process.env.FIRST_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    if (bootstrap && normalized === bootstrap) return true;
+  }
   return false;
 }
 

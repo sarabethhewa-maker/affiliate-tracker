@@ -50,12 +50,31 @@ export async function sendWeeklyDigest(html: string) {
   });
 }
 
-export async function sendAffiliateWelcome(name: string, email: string, salesLink: string, recruitLink: string) {
+export async function sendAffiliateWelcome(
+  name: string,
+  email: string,
+  salesLink: string,
+  recruitLink: string,
+  opts?: { tierName?: string; commissionRate?: number; portalUrl?: string }
+) {
+  if (!resend) return;
+  const tierName = opts?.tierName ?? 'Silver';
+  const rate = opts?.commissionRate ?? 10;
+  const portalUrl = opts?.portalUrl ?? (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/portal` : '/portal');
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: "You're in! Welcome to the BLL Affiliate Program",
+    html: `<p>Hi ${name},</p><p>You're in! Welcome to the Bio Longevity Labs Affiliate Program.</p><p><strong>Your tier:</strong> ${tierName} (${rate}% commission on sales)</p><p><strong>Sales link</strong> (share with customers):<br/><a href="${salesLink}">${salesLink}</a></p><p><strong>Recruit link</strong> (share to sign up new affiliates under you):<br/><a href="${recruitLink}">${recruitLink}</a></p><p>Sign in anytime at <a href="${portalUrl}">${portalUrl}</a> to view your dashboard, earnings, and team.</p><p>Welcome!</p>`,
+  });
+}
+
+export async function sendAffiliateRejection(name: string, email: string) {
   if (!resend) return;
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "You're approved — Bio Longevity Affiliate",
-    html: `<p>Hi ${name},</p><p>You're approved as an affiliate. Here are your links:</p><p><strong>Sales link</strong> (share with customers):<br/><a href="${salesLink}">${salesLink}</a></p><p><strong>Recruit link</strong> (share to sign up new affiliates under you):<br/><a href="${recruitLink}">${recruitLink}</a></p><p>You earn a % of sales from your referrals. Welcome!</p>`,
+    subject: 'Bio Longevity Labs Affiliate Program — Application update',
+    html: `<p>Hi ${name},</p><p>Thank you for your interest in the Bio Longevity Labs Affiliate Program. After review, we're unable to approve your application at this time.</p><p>If you have questions, please reply to this email.</p><p>Best,<br/>Bio Longevity Labs Team</p>`,
   });
 }

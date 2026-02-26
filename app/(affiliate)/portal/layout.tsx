@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import OnboardingChecklist from "./OnboardingChecklist";
 
 const THEME = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  accent: "#38bdf8",
-  active: "#7dd3fc",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  border: "#e2e8f0",
+  text: "#1a1a1a",
+  textMuted: "#4a5568",
+  accent: "#1e3a5f",
+  accentLight: "#3a7ca5",
+  active: "#1e3a5f",
 };
 
 const navItems = [
-  { href: "/portal", label: "Dashboard" },
+  { href: "/portal/dashboard", label: "Dashboard" },
   { href: "/portal/links", label: "My Links" },
   { href: "/portal/earnings", label: "Earnings" },
   { href: "/portal/team", label: "My Team" },
@@ -24,13 +26,34 @@ const navItems = [
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isGate = pathname === "/portal";
+
+  if (isGate) {
+    return <>{children}</>;
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: THEME.text }}>
-      <header style={{ borderBottom: `1px solid ${THEME.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/portal" style={{ color: THEME.text, fontSize: 18, fontWeight: 800, textDecoration: "none" }}>
-            Affiliate Portal
+      <header style={{ borderBottom: `1px solid ${THEME.border}`, padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, background: THEME.card }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+          <Link
+            href="/"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "none",
+              background: "transparent",
+              color: THEME.accent,
+              border: `1px solid ${THEME.accent}`,
+            }}
+          >
+            Admin dashboard
+          </Link>
+          <Link href="/portal/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, color: THEME.text, textDecoration: "none" }}>
+            <Image src="/biolongevity-logo.png" alt="Bio Longevity Labs" width={160} height={41} style={{ width: "auto", height: 36, objectFit: "contain" }} />
+            <span style={{ fontSize: 16, fontWeight: 700, color: THEME.textMuted }}>Affiliate Portal</span>
           </Link>
           <nav style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {navItems.map(({ href, label }) => (
@@ -43,7 +66,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                   fontSize: 14,
                   fontWeight: 600,
                   textDecoration: "none",
-                  background: pathname === href ? THEME.card : "transparent",
+                  background: pathname === href ? THEME.bg : "transparent",
                   color: pathname === href ? THEME.active : THEME.textMuted,
                   border: `1px solid ${pathname === href ? THEME.border : "transparent"}`,
                 }}
@@ -52,9 +75,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </Link>
             ))}
           </nav>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" style={{ fontSize: 13, color: THEME.textMuted, textDecoration: "none" }}>Admin</Link>
         </div>
       </header>
       <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>

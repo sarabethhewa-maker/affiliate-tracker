@@ -77,12 +77,42 @@ export default function HowToUsePage() {
 
       <div style={cardStyle}>
         <h2 style={headingStyle}><span style={{ fontSize: 20 }}>💰</span> Recording Sales</h2>
-        <p style={bodyStyle}>Go to <strong>Conversion Status</strong> and click <strong>+ Log Sale</strong>. Select the affiliate, enter the sale amount, optional date and note. The conversion is created as &quot;pending&quot; — you can Approve it, then Mark paid when you&apos;ve sent the payout. This updates the affiliate&apos;s revenue and their volume-based tier.</p>
+        <p style={bodyStyle}>Go to <strong>Conversion Status</strong> and click <strong>+ Log Sale</strong>. Select the affiliate, enter the sale amount, optional date and note. The conversion is created as &quot;pending&quot; — you can Approve it, then Mark paid when you&apos;ve sent the payout. This updates the affiliate&apos;s revenue and their volume-based tier. If you use <strong>WooCommerce</strong>, completed orders can create conversions automatically via the webhook (see WooCommerce section below).</p>
       </div>
 
       <div style={cardStyle}>
         <h2 style={headingStyle}><span style={{ fontSize: 20 }}>💳</span> Paying Affiliates</h2>
-        <p style={bodyStyle}>On the <strong>Payouts</strong> tab you see unpaid vs paid balance per affiliate. Click <strong>Pay Now</strong> to open a modal: amount is pre-filled, choose payment method (PayPal, Venmo/Zelle, Bank Transfer), add a reference, then Confirm. The payout is recorded and approved conversions are marked paid.</p>
+        <p style={bodyStyle}>On the <strong>Payouts</strong> tab you see unpaid vs paid balance per affiliate. Click <strong>Pay Now</strong> to open a modal: amount is pre-filled, choose payment method (PayPal, Venmo/Zelle, Bank Transfer, Tipalti), add a reference, then Confirm. The payout is recorded and approved conversions are marked paid.</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>🛒</span> WooCommerce</h2>
+        <p style={bodyStyle}>Connect your WooCommerce store so completed orders are recorded as conversions automatically. In <strong><Link href="/settings">Settings → WooCommerce</Link></strong> enter your Store URL, Consumer Key, and Consumer Secret (from WooCommerce → Settings → Advanced → REST API). Use <strong>Test Connection</strong> to verify, then <strong>Manual Sync</strong> to pull in recent orders once. For ongoing automation, create a webhook in WooCommerce: go to Settings → Advanced → Webhooks, create a webhook for <strong>Order updated</strong>, set the URL to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>https://your-domain.com/api/webhooks/woocommerce</code>, and set the same secret in Settings or as <code>WOOCOMMERCE_WEBHOOK_SECRET</code> in .env.local. New orders will create conversions and tiers will recalculate automatically.</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>💸</span> Tipalti</h2>
+        <p style={bodyStyle}>Tipalti handles mass payouts and compliance. In <strong><Link href="/settings">Settings → Tipalti</Link></strong> add your API Key and Payer Name (or set <code>TIPALTI_API_KEY</code>, <code>TIPALTI_PAYER_NAME</code>, <code>TIPALTI_SANDBOX</code> in .env.local). Use <strong>Test Connection</strong> to confirm. Then: (1) From the Affiliates tab, use <strong>Tipalti Invite</strong> so affiliates complete payment onboarding; (2) On the Payouts tab, choose <strong>Pay via Tipalti</strong> when paying an affiliate, or use <strong>Mass Payout</strong> to pay multiple affiliates at once. Payment status (confirmed/failed) comes back via the Tipalti webhook — configure your webhook URL in Tipalti to <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>https://your-domain.com/api/webhooks/tipalti</code>.</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>📧</span> Email Marketing (Klaviyo / Mailchimp)</h2>
+        <p style={bodyStyle}>Sync active affiliates to Klaviyo or Mailchimp for campaigns. In <strong><Link href="/settings">Settings → Email Marketing</Link></strong> choose the platform (None, Klaviyo, or Mailchimp), then enter API key and Affiliate List ID (and for Mailchimp, server prefix e.g. us19). Use <strong>Test Connection</strong> and <strong>Sync All Affiliates</strong> to push everyone at once. Affiliates are also synced automatically when you approve them, when their tier changes, and when a payout is sent. The Status section shows how many are synced and when you last synced.</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>📬</span> Weekly Email Digest</h2>
+        <p style={bodyStyle}>A weekly digest runs every Monday at 8:00 (cron: <code style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: 4 }}>0 8 * * 1</code>) and is sent to the admin email(s) in Settings. It includes revenue vs last week, new affiliates, top performers, commissions owed, and tier upgrades. Set <strong>Admin notification email</strong> or <strong>Admin emails</strong> in Settings → Program Settings. Use <strong>Send test digest</strong> in Settings → Weekly email digest to send a one-off test. Resend is used for sending (set <code>RESEND_API_KEY</code> and <code>RESEND_FROM_EMAIL</code> in .env).</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>🔐</span> Admin Access</h2>
+        <p style={bodyStyle}>Only users whose email is listed as admin can open the admin dashboard (/, /settings, /how-to-use). In <strong><Link href="/settings">Settings → Program Settings</Link></strong> set <strong>Admin emails</strong> (comma-separated) or the single <strong>Admin notification email</strong>. If no admin is configured yet, you can set <code>FIRST_ADMIN_EMAIL=your@email.com</code> in .env.local (use your Clerk login email) to get in once; then add your email in Settings so it persists. Affiliates see an <strong>Admin dashboard</strong> button in the portal header (they’ll be redirected to /portal if they’re not admins). From the admin dashboard, use <strong>Affiliate dashboard</strong> in the top right to open the affiliate portal (/portal).</p>
+      </div>
+
+      <div style={cardStyle}>
+        <h2 style={headingStyle}><span style={{ fontSize: 20 }}>👤</span> Affiliate Portal</h2>
+        <p style={bodyStyle}>Approved affiliates sign in with Clerk and go to <strong>/portal</strong> (Affiliate Portal). There they see their dashboard, tracking link, recruit link, earnings, team, and payouts. They can complete Tipalti onboarding from the Payouts page if you use Tipalti. Admins can preview an affiliate’s view via <strong>View as Affiliate</strong> on an affiliate card, or by visiting <code>/portal?preview=affiliateId</code>.</p>
       </div>
 
       <div style={cardStyle}>
@@ -98,6 +128,12 @@ export default function HowToUsePage() {
           <p style={faqA}>Use Pay Now on the Payouts tab (marks approved conversions as paid and records the payout), or in Conversion Status click &quot;Mark paid&quot; on individual approved conversions.</p>
           <p style={faqQ}>Can I see who recruited who?</p>
           <p style={faqA}>Yes. Open the MLM Tree tab for a visual hierarchy, or on the Affiliates tab each card shows &quot;Referred by [name]&quot; and &quot;Signed up N referrals.&quot;</p>
+          <p style={faqQ}>How do WooCommerce orders become conversions?</p>
+          <p style={faqA}>Set up the webhook for Order updated to point to /api/webhooks/woocommerce. When an order is completed, the webhook matches it to an affiliate (via click/cookie) and creates a conversion. You can also run a manual sync from Settings → WooCommerce to pull recent orders.</p>
+          <p style={faqQ}>How do I use Tipalti for payouts?</p>
+          <p style={faqA}>Add your Tipalti API key and payer name in Settings. Invite affiliates via Tipalti Invite so they complete onboarding. Then use Pay via Tipalti when paying one affiliate, or Mass Payout to pay many at once. Configure the Tipalti webhook so payment status updates (confirmed/failed) are recorded.</p>
+          <p style={faqQ}>How does email marketing sync work?</p>
+          <p style={faqA}>In Settings → Email Marketing choose Klaviyo or Mailchimp and enter credentials. Sync runs automatically when you approve an affiliate, when their tier changes, and when you send a payout. You can also run &quot;Sync All Affiliates&quot; anytime.</p>
         </div>
       </div>
     </div>

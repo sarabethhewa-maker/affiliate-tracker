@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendAdminNewSignup } from '@/lib/email';
 
-const HOW_DID_YOU_HEAR = ['Social Media', 'Friend/Referral', 'Google', 'Other'] as const;
+const HOW_DID_YOU_HEAR = ['Social Media', 'Friend/Referral', 'Google', 'Existing Affiliate', 'Other'] as const;
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

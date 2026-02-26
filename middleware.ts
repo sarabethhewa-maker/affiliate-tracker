@@ -1,16 +1,18 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 
 export default clerkMiddleware((_auth, req) => {
-  // Public: affiliate signup, apply API, and webhooks (no Clerk)
+  // Public: affiliate signup, apply API, portal (landing + gate), and webhooks (no Clerk)
   if (
     req.nextUrl.pathname === '/join' ||
     req.nextUrl.pathname === '/api/join' ||
     req.nextUrl.pathname === '/api/affiliates/apply' ||
     req.nextUrl.pathname === '/api/webhooks/woocommerce' ||
-    req.nextUrl.pathname === '/api/webhooks/tipalti'
+    req.nextUrl.pathname === '/api/webhooks/tipalti' ||
+    req.nextUrl.pathname === '/portal' ||
+    req.nextUrl.pathname.startsWith('/portal/')
   )
     return;
-  // /portal and sub-routes require any signed-in user (enforced by Clerk); admin routes (/, /settings, etc.) require admin (checked in (admin)/layout).
+  // Admin routes (/, /settings, etc.) and other API routes still go through Clerk.
 });
 
 export const config = {

@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME = {
-  bg: "#0f172a",
-  card: "#1e293b",
-  border: "#334155",
-  text: "#f1f5f9",
-  textMuted: "#94a3b8",
-  accent: "#38bdf8",
-  success: "#4ade80",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  border: "#e2e8f0",
+  text: "#1a1a1a",
+  textMuted: "#4a5568",
+  accent: "#1e3a5f",
+  success: "#0d7a3d",
 };
 
 type MeResponse = {
