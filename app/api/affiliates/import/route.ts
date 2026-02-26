@@ -12,7 +12,12 @@ type ImportAffiliate = {
   socialHandle?: string;
   websiteUrl?: string;
   couponCode?: string;
+  /** Legacy; prefer grossConversions, approvedConversions, etc. */
   totalConversions?: number;
+  grossConversions?: number;
+  approvedConversions?: number;
+  rejectedConversions?: number;
+  pendingConversions?: number;
   totalRevenue?: number;
   totalPayout?: number;
   commissionRate?: number;
@@ -105,18 +110,28 @@ export async function POST(req: NextRequest) {
           });
           if (referrer) parentId = referrer.id;
         }
+        const updateData: Record<string, unknown> = {
+          name: name || existing.name,
+          tier: row.tier != null ? normalizeTier(row.tier) : existing.tier,
+          phone: row.phone != null ? String(row.phone).trim() || null : existing.phone,
+          socialHandle: row.socialHandle != null ? String(row.socialHandle).trim() || null : existing.socialHandle,
+          websiteUrl: row.websiteUrl != null ? String(row.websiteUrl).trim().slice(0, 500) || null : existing.websiteUrl,
+          couponCode: row.couponCode != null ? String(row.couponCode).trim() || null : existing.couponCode,
+          notes: row.notes != null ? String(row.notes).trim() || null : existing.notes,
+          parentId: parentId ?? existing.parentId,
+        };
+        const rev = typeof row.totalRevenue === 'number' ? row.totalRevenue : Number(row.totalRevenue) || 0;
+        if (rev > 0) (updateData as { tier?: string }).tier = String(getTierIndexForRevenue(rev, settings.tiers));
+        if (row.grossConversions != null) updateData.historicalGrossConversions = Number(row.grossConversions) || 0;
+        if (row.approvedConversions != null) updateData.historicalApprovedConversions = Number(row.approvedConversions) || 0;
+        if (row.rejectedConversions != null) updateData.historicalRejectedConversions = Number(row.rejectedConversions) || 0;
+        if (row.pendingConversions != null) updateData.historicalPendingConversions = Number(row.pendingConversions) || 0;
+        if (row.totalRevenue != null) updateData.historicalRevenue = Number(row.totalRevenue) || 0;
+        if (row.totalPayout != null) updateData.historicalPayout = Number(row.totalPayout) || 0;
+        if (Object.keys(updateData).some((k) => k.startsWith('historical'))) updateData.importSource = 'csv-import';
         await prisma.affiliate.update({
           where: { id: existing.id },
-          data: {
-            name: name || existing.name,
-            tier: row.tier != null ? normalizeTier(row.tier) : existing.tier,
-            phone: row.phone != null ? String(row.phone).trim() || null : existing.phone,
-            socialHandle: row.socialHandle != null ? String(row.socialHandle).trim() || null : existing.socialHandle,
-            websiteUrl: row.websiteUrl != null ? String(row.websiteUrl).trim().slice(0, 500) || null : existing.websiteUrl,
-            couponCode: row.couponCode != null ? String(row.couponCode).trim() || null : existing.couponCode,
-            notes: row.notes != null ? String(row.notes).trim() || null : existing.notes,
-            parentId: parentId ?? existing.parentId,
-          },
+          data: updateData as Parameters<typeof prisma.affiliate.update>[0]['data'],
         });
         updated++;
         continue;
@@ -131,14 +146,21 @@ export async function POST(req: NextRequest) {
       }
 
       const totalRevenue = typeof row.totalRevenue === 'number' ? row.totalRevenue : Number(row.totalRevenue) || 0;
+      const totalPayout = typeof row.totalPayout === 'number' ? row.totalPayout : Number(row.totalPayout) || 0;
       const tierIndex =
         totalRevenue > 0
           ? getTierIndexForRevenue(totalRevenue, settings.tiers)
           : parseInt(normalizeTier(row.tier), 10) ?? 0;
 
+      const num = (v: number | undefined) => (typeof v === 'number' && !Number.isNaN(v) ? v : 0);
+      const grossConv = num(row.grossConversions) || num(row.totalConversions) || 0;
+      const approvedConv = num(row.approvedConversions) || 0;
+      const rejectedConv = num(row.rejectedConversions) || 0;
+      const pendingConv = num(row.pendingConversions) || 0;
+
       try {
         const slug = await generateUniqueSlug(prisma, slugFromName(name));
-        const aff = await prisma.affiliate.create({
+        await prisma.affiliate.create({
           data: {
             name: name || email,
             email,
@@ -151,39 +173,18 @@ export async function POST(req: NextRequest) {
             couponCode: row.couponCode ? String(row.couponCode).trim().slice(0, 50) : null,
             notes: row.notes ? String(row.notes).trim().slice(0, 2000) : null,
             parentId,
-            historicalConversions: typeof row.totalConversions === 'number' ? row.totalConversions : Number(row.totalConversions) || null,
+            historicalGrossConversions: grossConv || null,
+            historicalApprovedConversions: approvedConv || null,
+            historicalRejectedConversions: rejectedConv || null,
+            historicalPendingConversions: pendingConv || null,
             historicalRevenue: totalRevenue > 0 ? totalRevenue : null,
+            historicalPayout: totalPayout > 0 ? totalPayout : null,
             importSource: 'csv-import',
           },
         });
 
-        if (totalRevenue > 0) {
-          totalHistoricalRevenue += totalRevenue;
-          await prisma.conversion.create({
-            data: {
-              affiliateId: aff.id,
-              amount: totalRevenue,
-              status: 'approved',
-              orderNumber: 'HISTORICAL-IMPORT',
-              orderStatus: 'completed',
-              source: 'historical-import',
-            },
-          });
-        }
-
-        const totalPayout = typeof row.totalPayout === 'number' ? row.totalPayout : Number(row.totalPayout) || 0;
-        if (totalPayout > 0) {
-          totalHistoricalPayouts += totalPayout;
-          await prisma.payout.create({
-            data: {
-              affiliateId: aff.id,
-              amount: totalPayout,
-              method: 'other',
-              note: 'Historical import',
-              payoutStatus: 'confirmed',
-            },
-          });
-        }
+        if (totalRevenue > 0) totalHistoricalRevenue += totalRevenue;
+        if (totalPayout > 0) totalHistoricalPayouts += totalPayout;
 
         const tierKey = tierNames[tierIndex] ?? 'silver';
         if (tierKey === 'silver') tierBreakdown.silver++;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import Papa from "papaparse";
 
 const THEME = {
@@ -22,20 +22,22 @@ const COLUMN_OPTIONS = [
   "Name",
   "Email",
   "Phone",
-  "Tier",
   "Social Handle",
   "Website URL",
   "Coupon Code",
-  "Total Conversions",
+  "Tier",
+  "Gross Conversions",
+  "Approved Conversions",
+  "Rejected Conversions",
+  "Pending Conversions",
   "Total Revenue",
   "Total Payout",
   "Commission Rate",
-  "Referred By",
   "Skip",
 ] as const;
 
 const CSV_TEMPLATE =
-  "name,email,phone,tier,social_handle,website_url,coupon_code,total_conversions,total_revenue,total_payout,commission_rate,referred_by_email,notes\nJane Doe,jane@example.com,(555) 123-4567,silver,@jane,https://example.com,JANE15,42,5000.00,500.00,10,,Met at conference\n";
+  "name,email,phone,social_handle,website_url,coupon_code,tier,gross_conversions,approved_conversions,rejected_conversions,pending_conversions,net_revenue,net_payout,commission_rate\nJane Doe,jane@example.com,(555) 123-4567,@jane,https://example.com,JANE15,silver,50,42,5,3,5000.00,500.00,10\n";
 
 type ImportRow = {
   name: string;
@@ -45,7 +47,10 @@ type ImportRow = {
   socialHandle?: string;
   websiteUrl?: string;
   couponCode?: string;
-  totalConversions?: number;
+  grossConversions?: number;
+  approvedConversions?: number;
+  rejectedConversions?: number;
+  pendingConversions?: number;
   totalRevenue?: number;
   totalPayout?: number;
   commissionRate?: number;
@@ -103,6 +108,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   const [tuneConnected, setTuneConnected] = useState(false);
   const [importLogs, setImportLogs] = useState<ImportLogEntry[]>([]);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [autoDetectionRan, setAutoDetectionRan] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadImportLogs = useCallback(async () => {
@@ -165,6 +171,8 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   ];
 
   const mapCsvToRows = useCallback((): ImportRow[] => {
+    const num = (raw: string) => parseFloat(raw.replace(/[$,]/g, "")) || 0;
+    const int = (raw: string) => Math.floor(num(raw)) || 0;
     return csvRows
       .map((row) => {
         const out: Record<string, string | number | undefined> = {};
@@ -172,7 +180,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
           const mapped = columnMap[h] || "Skip";
           if (mapped === "Skip") return;
           const raw = row[h] != null ? String(row[h]).trim() : "";
-          if (raw === "") return;
+          if (mapped !== "Name" && raw === "") return;
           if (mapped === "Name") out.name = raw;
           else if (mapped === "Email") out.email = raw;
           else if (mapped === "Tier") out.tier = raw;
@@ -180,13 +188,15 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
           else if (mapped === "Social Handle") out.socialHandle = raw;
           else if (mapped === "Website URL") out.websiteUrl = raw;
           else if (mapped === "Coupon Code") out.couponCode = raw;
-          else if (mapped === "Total Conversions") out.totalConversions = parseFloat(raw) || 0;
-          else if (mapped === "Total Revenue") out.totalRevenue = parseFloat(raw.replace(/[$,]/g, "")) || 0;
-          else if (mapped === "Total Payout") out.totalPayout = parseFloat(raw.replace(/[$,]/g, "")) || 0;
-          else if (mapped === "Commission Rate") out.commissionRate = parseFloat(raw.replace(/%/g, "")) || 0;
-          else if (mapped === "Referred By") out.referred_by_email = raw;
+          else if (mapped === "Gross Conversions") out.grossConversions = int(raw);
+          else if (mapped === "Approved Conversions") out.approvedConversions = int(raw);
+          else if (mapped === "Rejected Conversions") out.rejectedConversions = int(raw);
+          else if (mapped === "Pending Conversions") out.pendingConversions = int(raw);
+          else if (mapped === "Total Revenue") out.totalRevenue = num(raw);
+          else if (mapped === "Total Payout") out.totalPayout = num(raw);
+          else if (mapped === "Commission Rate") out.commissionRate = num(raw.replace(/%/g, ""));
         });
-        if (!out.name) return null;
+        if (!out.name || String(out.name).trim() === "") return null;
         return out as ImportRow;
       })
       .filter(Boolean) as ImportRow[];
@@ -249,6 +259,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
     if (!file.name.toLowerCase().endsWith(".csv")) return;
     setCsvFile(file);
     setImportResult(null);
+    setAutoDetectionRan(false);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -262,24 +273,85 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
         setCsvHeaders(headers);
         const lower = (s: string) => s.trim().toLowerCase().replace(/_/g, " ");
         const autoMap: Record<string, string> = {};
+        const used = new Set<string>();
+        const assign = (header: string, option: string) => {
+          if (!used.has(option)) {
+            autoMap[header] = option;
+            used.add(option);
+          } else {
+            autoMap[header] = "Skip";
+          }
+        };
         headers.forEach((h) => {
           const l = lower(h);
-          if (["affiliate", "name", "affiliate name", "full name", "fullname"].some((a) => l.includes(a) || l === a.replace(/ /g, "_"))) autoMap[h] = "Name";
-          else if (["email", "email address", "email_address"].some((a) => l.includes(a))) autoMap[h] = "Email";
-          else if (["phone", "telephone", "phone number", "phone_number"].some((a) => l.includes(a))) autoMap[h] = "Phone";
-          else if (["tier", "level"].some((a) => l.includes(a))) autoMap[h] = "Tier";
-          else if (["instagram", "social", "social_handle", "social handle", "handle"].some((a) => l.includes(a))) autoMap[h] = "Social Handle";
-          else if (["website", "website url", "website_url", "url"].some((a) => l.includes(a))) autoMap[h] = "Website URL";
-          else if (["coupon", "coupon code", "coupon_code"].some((a) => l.includes(a))) autoMap[h] = "Coupon Code";
-          else if (["gross_conversions", "total_conversions", "total conversions", "conversions"].some((a) => l.includes(a))) autoMap[h] = "Total Conversions";
-          else if (["net_revenue", "total_revenue", "total revenue", "revenue", "sales"].some((a) => l.includes(a))) autoMap[h] = "Total Revenue";
-          else if (["net_payout", "total_payout", "total payout", "payout", "commission"].some((a) => l.includes(a))) autoMap[h] = "Total Payout";
-          else if (["commission rate", "commission_rate", "rate"].some((a) => l.includes(a))) autoMap[h] = "Commission Rate";
-          else if (["referred_by", "referred_by_email", "referrer", "referred by"].some((a) => l.includes(a))) autoMap[h] = "Referred By";
-          else if (["offer", "program", "approved", "approved_conversions", "rejected", "rejected_conversions", "pending_conversions", "pending"].some((a) => l.includes(a))) autoMap[h] = "Skip";
-          else autoMap[h] = "Skip";
+          if (l === "offer" || l === "program") {
+            autoMap[h] = "Skip";
+            return;
+          }
+          if (l === "rejected" || l === "approved") {
+            autoMap[h] = "Skip";
+            return;
+          }
+          if (l === "gross_conversions" || l === "gross conversions") {
+            assign(h, "Gross Conversions");
+            return;
+          }
+          if (l === "approved_conversions" || l === "approved conversions") {
+            assign(h, "Approved Conversions");
+            return;
+          }
+          if (l === "rejected_conversions" || l === "rejected conversions") {
+            assign(h, "Rejected Conversions");
+            return;
+          }
+          if (l === "pending_conversions" || l === "pending conversions") {
+            assign(h, "Pending Conversions");
+            return;
+          }
+          if (["net_payout", "total_payout", "total payout", "payout"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Total Payout");
+            return;
+          }
+          if (["net_revenue", "total_revenue", "total revenue", "revenue"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Total Revenue");
+            return;
+          }
+          if (["affiliate", "name", "affiliate_name", "affiliate name"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Name");
+            return;
+          }
+          if (l === "email" || l.includes("email")) {
+            assign(h, "Email");
+            return;
+          }
+          if (l === "phone" || l.includes("phone")) {
+            assign(h, "Phone");
+            return;
+          }
+          if (["social_handle", "social handle", "social", "handle"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Social Handle");
+            return;
+          }
+          if (["website_url", "website url", "website"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Website URL");
+            return;
+          }
+          if (["coupon_code", "coupon code", "coupon"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Coupon Code");
+            return;
+          }
+          if (l === "tier" || l === "level") {
+            assign(h, "Tier");
+            return;
+          }
+          if (["commission_rate", "commission rate", "rate"].some((a) => l === a || l.includes(a))) {
+            assign(h, "Commission Rate");
+            return;
+          }
+          autoMap[h] = "Skip";
         });
         setColumnMap(autoMap);
+        setAutoDetectionRan(true);
       },
     });
   };
@@ -383,6 +455,11 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
       <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24 }}>
         {method === "csv" && (
           <>
+            {autoDetectionRan && csvHeaders.length > 0 && (
+              <div style={{ background: "#fef9c7", border: "1px solid #eab308", borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#713f12" }}>
+                We auto-detected column mappings from your CSV. Please review before importing.
+              </div>
+            )}
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: THEME.text }}>CSV Upload</h3>
             <div
               onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.background = THEME.bg; }}
@@ -392,21 +469,32 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
             >
               <input ref={fileInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvFile(f); }} />
               <p style={{ color: THEME.textMuted, marginBottom: 8 }}>Drag and drop a CSV file here, or</p>
-              <button type="button" onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 16px", background: THEME.accent, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>Browse files</button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 16px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>Browse files</button>
               {csvFile && <p style={{ marginTop: 12, color: THEME.text, fontSize: 13 }}>{csvFile.name} ({csvRows.length} rows)</p>}
             </div>
             {csvHeaders.length > 0 && (
               <>
-                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: THEME.text }}>Match your columns to our fields</p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-                  {csvHeaders.map((h) => (
-                    <div key={h} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 12, color: THEME.textMuted }}>{h} →</span>
-                      <select value={columnMap[h] || "Skip"} onChange={(e) => setColumnMap((m) => ({ ...m, [h]: e.target.value }))} style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${THEME.border}`, fontSize: 12 }}>
-                        {COLUMN_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                  ))}
+                <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: THEME.text }}>Match your columns to our fields</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "8px 24px", alignItems: "center", marginBottom: 16, maxWidth: 560 }}>
+                  {csvHeaders.map((h) => {
+                    const mapped = columnMap[h] || "Skip";
+                    const isMapped = mapped !== "Skip";
+                    return (
+                      <React.Fragment key={h}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: THEME.text }}>{h}</span>
+                          {isMapped && <span style={{ color: THEME.success, fontSize: 14 }} aria-hidden>✓</span>}
+                          {!isMapped && <span style={{ background: THEME.border, color: THEME.textMuted, fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: 600 }}>Skip</span>}
+                        </div>
+                        <select value={mapped} onChange={(e) => setColumnMap((m) => ({ ...m, [h]: e.target.value }))} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${THEME.border}`, fontSize: 13, background: THEME.card, color: THEME.text, minWidth: 180 }}>
+                          {COLUMN_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+                <div style={{ background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: THEME.text }}>
+                  {importableCount} affiliates will be imported. {Math.max(0, csvRows.length - importableCount)} will be skipped (missing name or empty row).
                 </div>
                 <div style={{ maxHeight: 200, overflow: "auto", marginBottom: 16 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -528,29 +616,33 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
 
         {importing && <div style={{ marginTop: 16, height: 6, background: THEME.border, borderRadius: 3, overflow: "hidden" }}><div style={{ width: "40%", height: "100%", background: THEME.accent, animation: "pulse 1s ease infinite" }} /></div>}
         {importResult && (
-          <div style={{ marginTop: 16, padding: 16, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: THEME.text, marginBottom: 12 }}>Import summary</div>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
-              <span style={{ color: THEME.success, fontWeight: 600 }}>{importResult.imported} imported</span>
-              <span style={{ color: THEME.textMuted }}>{importResult.updated} updated</span>
-              <span style={{ color: THEME.warning }}>{importResult.skipped} skipped</span>
-              <span style={{ color: importResult.errors ? THEME.error : THEME.textMuted }}>{importResult.errors} errors</span>
+          <div style={{ marginTop: 16, padding: 20, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: THEME.text, marginBottom: 16 }}>Import complete</div>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 16 }}>
+              <span style={{ color: THEME.success, fontWeight: 700, fontSize: 15 }}>{importResult.imported} imported</span>
+              <span style={{ color: THEME.textMuted, fontSize: 14 }}>{importResult.updated} updated</span>
+              <span style={{ color: THEME.warning, fontSize: 14 }}>{importResult.skipped} skipped</span>
+              <span style={{ color: importResult.errors ? THEME.error : THEME.textMuted, fontSize: 14 }}>{importResult.errors} errors</span>
             </div>
             {importResult.summary && (
               <>
                 {importResult.summary.tierBreakdown && (
-                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.textMuted }}>
-                    Tier breakdown: {importResult.summary.tierBreakdown.silver ?? 0} Silver, {importResult.summary.tierBreakdown.gold ?? 0} Gold, {importResult.summary.tierBreakdown.master ?? 0} Master
+                  <div style={{ marginBottom: 10, padding: "12px 14px", background: "#f8f9fa", borderRadius: 8, fontSize: 13, color: THEME.text }}>
+                    <strong>Tier breakdown:</strong> {importResult.summary.tierBreakdown.silver ?? 0} Silver, {importResult.summary.tierBreakdown.gold ?? 0} Gold, {importResult.summary.tierBreakdown.master ?? 0} Master
                   </div>
                 )}
-                {(importResult.summary.totalHistoricalRevenue ?? 0) > 0 && (
-                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.text }}>Total historical revenue imported: ${importResult.summary.totalHistoricalRevenue!.toLocaleString()}</div>
-                )}
-                {(importResult.summary.totalHistoricalPayouts ?? 0) > 0 && (
-                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.text }}>Total historical payouts imported: ${importResult.summary.totalHistoricalPayouts!.toLocaleString()}</div>
+                {((importResult.summary.totalHistoricalRevenue ?? 0) > 0 || (importResult.summary.totalHistoricalPayouts ?? 0) > 0) && (
+                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 12 }}>
+                    {(importResult.summary.totalHistoricalRevenue ?? 0) > 0 && (
+                      <div style={{ fontSize: 13, color: THEME.text }}><strong>Total revenue imported:</strong> ${importResult.summary.totalHistoricalRevenue!.toLocaleString()}</div>
+                    )}
+                    {(importResult.summary.totalHistoricalPayouts ?? 0) > 0 && (
+                      <div style={{ fontSize: 13, color: THEME.text }}><strong>Total payouts imported:</strong> ${importResult.summary.totalHistoricalPayouts!.toLocaleString()}</div>
+                    )}
+                  </div>
                 )}
                 {importResult.summary.skippedReasons && importResult.summary.skippedReasons.length > 0 && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: THEME.textMuted }}>
+                  <div style={{ marginTop: 12, fontSize: 12, color: THEME.textMuted }}>
                     <div style={{ fontWeight: 600, marginBottom: 4 }}>Skipped rows:</div>
                     <ul style={{ margin: 0, paddingLeft: 20 }}>
                       {importResult.summary.skippedReasons.slice(0, 10).map((s, i) => (

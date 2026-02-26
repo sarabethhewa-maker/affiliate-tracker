@@ -86,6 +86,13 @@ type Affiliate = {
   deletedAt?: string | null;
   createdAt: string;
   fraudFlags?: { id: string; type: string; description: string; severity: string; resolved: boolean; resolvedNote: string | null; createdAt: string }[];
+  historicalGrossConversions?: number | null;
+  historicalApprovedConversions?: number | null;
+  historicalRejectedConversions?: number | null;
+  historicalPendingConversions?: number | null;
+  historicalRevenue?: number | null;
+  historicalPayout?: number | null;
+  importSource?: string | null;
 };
 
 type ActivityLogEntry = { id: string; type: string; message: string; affiliateId: string | null; createdAt: string };
@@ -1689,6 +1696,20 @@ export default function Page() {
                                   </div>
                                 );
                               })}
+                            </div>
+                          )}
+                          {(aff.importSource || (aff.historicalRevenue != null && aff.historicalRevenue > 0) || (aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0)) && (
+                            <div style={{ marginTop: 12, padding: 12, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12 }}>
+                              <div style={{ fontWeight: 700, color: THEME.text, marginBottom: 8 }}>Historical Data (Pre-Import)</div>
+                              <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", color: THEME.textMuted }}>
+                                {aff.historicalGrossConversions != null && aff.historicalGrossConversions > 0 && <><span>Gross Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalGrossConversions}</span></>}
+                                {aff.historicalApprovedConversions != null && aff.historicalApprovedConversions > 0 && <><span>Approved Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalApprovedConversions}</span></>}
+                                {aff.historicalRejectedConversions != null && aff.historicalRejectedConversions > 0 && <><span>Rejected Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalRejectedConversions}</span></>}
+                                {aff.historicalPendingConversions != null && aff.historicalPendingConversions > 0 && <><span>Pending Conversions:</span><span style={{ color: THEME.text }}>{aff.historicalPendingConversions}</span></>}
+                                {aff.historicalRevenue != null && aff.historicalRevenue > 0 && <><span>Total Revenue:</span><span style={{ color: THEME.text }}>${aff.historicalRevenue.toLocaleString()}</span></>}
+                                {aff.historicalPayout != null && aff.historicalPayout > 0 && <><span>Total Payout:</span><span style={{ color: THEME.text }}>${aff.historicalPayout.toLocaleString()}</span></>}
+                                {aff.importSource && <><span>Import Source:</span><span style={{ color: THEME.text }}>{aff.importSource === "csv-import" ? "CSV Import" : aff.importSource}</span></>}
+                              </div>
                             </div>
                           )}
                         </div>

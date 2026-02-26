@@ -37,9 +37,14 @@ model Affiliate {
   websiteUrl       String?
   mailingAddress   String?
   joinedAt         DateTime? @default(now())
-  historicalConversions Int?    @default(0) // pre-import conversion count
-  historicalRevenue     Float?  @default(0) // pre-import revenue total
-  importSource         String?  // e.g. "csv-import", "tapaffiliate"
+  historicalConversions       Int?    @default(0) // legacy; prefer historical* below
+  historicalGrossConversions  Int?    @default(0)
+  historicalApprovedConversions Int?  @default(0)
+  historicalRejectedConversions Int?  @default(0)
+  historicalPendingConversions Int?   @default(0)
+  historicalRevenue          Float?  @default(0)
+  historicalPayout           Float?  @default(0)
+  importSource               String? // e.g. "csv-import", "tapaffiliate"
   parent           Affiliate?   @relation("AffiliateTree", fields: [parentId], references: [id])
   children         Affiliate[]  @relation("AffiliateTree")
   clicks           Click[]
