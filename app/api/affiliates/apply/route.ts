@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       email: String(email).trim().toLowerCase(),
       slug,
       status: 'pending',
-      parentId,
+      ...(parentId ? { parent: { connect: { id: parentId } } } : {}),
       phone: phone ? String(phone).trim() : null,
       socialHandle: socialHandle ? String(socialHandle).trim() : null,
       marketingChannel: marketingValue,

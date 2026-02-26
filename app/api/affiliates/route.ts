@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       email: body.email,
       slug,
       tier: body.tier ?? 'silver',
-      parentId: body.parentId ?? null,
+      ...(body.parentId ? { parent: { connect: { id: body.parentId } } } : {}),
       state: body.state ?? null,
     },
   });

@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
           websiteUrl: row.websiteUrl != null ? String(row.websiteUrl).trim().slice(0, 500) || null : existing.websiteUrl,
           couponCode: row.couponCode != null ? String(row.couponCode).trim() || null : existing.couponCode,
           notes: row.notes != null ? String(row.notes).trim() || null : existing.notes,
-          parentId: parentId ?? existing.parentId,
+          ...(parentId != null ? { parent: { connect: { id: parentId } } } : existing.parentId == null ? {} : { parent: { disconnect: true } }),
         };
         const rev = typeof row.totalRevenue === 'number' ? row.totalRevenue : Number(row.totalRevenue) || 0;
         if (rev > 0) (updateData as { tier?: string }).tier = String(getTierIndexForRevenue(rev, settings.tiers));
@@ -193,7 +193,7 @@ export async function POST(req: NextRequest) {
             websiteUrl: row.websiteUrl ? String(row.websiteUrl).trim().slice(0, 500) : null,
             couponCode: row.couponCode ? String(row.couponCode).trim().slice(0, 50) : null,
             notes: row.notes ? String(row.notes).trim().slice(0, 2000) : null,
-            parentId,
+            ...(parentId ? { parent: { connect: { id: parentId } } } : {}),
             historicalGrossConversions: grossConv || null,
             historicalApprovedConversions: approvedConv || null,
             historicalRejectedConversions: rejectedConv || null,

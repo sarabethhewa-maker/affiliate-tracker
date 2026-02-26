@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       email: (email as string).trim().toLowerCase(),
       slug,
       status: 'pending',
-      parentId,
+      ...(parentId ? { parent: { connect: { id: parentId } } } : {}),
     },
   });
 
