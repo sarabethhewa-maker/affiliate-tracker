@@ -19,7 +19,7 @@ const THEME = {
 
 type MeResponse = {
   pending?: boolean;
-  affiliate?: { id: string; name: string; referralCode: string | null; slug: string | null; socialHandle?: string | null };
+  affiliate?: { id: string; name: string; referralCode: string | null; slug: string | null; socialHandle?: string | null; couponCode?: string | null };
   tiers?: { name: string; commission: number }[];
   tierIndex?: number;
   commissionRate?: number;
@@ -150,7 +150,11 @@ export default function PortalLinksPage() {
 
       <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: THEME.text }}>Tracking link</h2>
-        <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Share this link with customers. When they click and buy, you get credit.</p>
+        {aff.couponCode ? (
+          <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Share your link <strong style={{ color: THEME.text }}>or</strong> your coupon code <strong style={{ color: THEME.accent, fontFamily: "monospace" }}>{aff.couponCode}</strong> — either way you get credited!</p>
+        ) : (
+          <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 12 }}>Share this link with customers. When they click and buy, you get credit.</p>
+        )}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
           <code style={{ flex: 1, minWidth: 200, padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 13, wordBreak: "break-all" }}>{trackingLink}</code>
           <button type="button" onClick={() => { copyToClipboard(trackingLink, setCopiedTrack); setOnboardingCopiedLink(); }} style={{ padding: "10px 16px", background: copiedTrack ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Tooltip from "../components/Tooltip";
@@ -33,12 +33,19 @@ const THEME = {
   overlay: "rgba(0,0,0,0.4)",
 };
 
+type OrderItemRow = { name?: string; quantity?: number; total?: string };
+
 type ConversionRow = {
   id: string;
   amount: number;
   status: string;
   product: string | null;
   orderId: string | null;
+  orderNumber: string | null;
+  orderStatus: string | null;
+  orderItems: OrderItemRow[] | null;
+  customerName: string | null;
+  customerCity: string | null;
   source: string | null;
   paidAt: string | null;
   createdAt: string;
@@ -64,8 +71,10 @@ type Affiliate = {
   parent?: Affiliate | null;
   children: Affiliate[];
   clicks: { id: string; createdAt?: string }[];
-  conversions: { id: string; amount: number; status?: string; product?: string | null; createdAt: string }[];
+  conversions: { id: string; amount: number; status?: string; product?: string | null; createdAt: string; orderNumber?: string | null; orderStatus?: string | null; orderItems?: unknown; orderId?: string | null; paidAt?: string | null }[];
   payouts?: { id: string; amount: number; method?: string; note?: string | null; paidAt: string; tipaltiRefCode?: string | null; payoutStatus?: string | null }[];
+  couponCode?: string | null;
+  storeCredit?: number;
   createdAt: string;
 };
 
@@ -345,6 +354,13 @@ export default function Page() {
   const [calcShareCopied, setCalcShareCopied] = useState(false);
   const [rejectConfirm, setRejectConfirm] = useState<{ id: string; name: string } | null>(null);
   const [rejectSendEmail, setRejectSendEmail] = useState(false);
+  const [convExpandedId, setConvExpandedId] = useState<string | null>(null);
+  const [editingCouponId, setEditingCouponId] = useState<string | null>(null);
+  const [couponEditValue, setCouponEditValue] = useState("");
+  const [couponSaving, setCouponSaving] = useState(false);
+  const [storeCreditModal, setStoreCreditModal] = useState<{ affId: string; affName: string } | null>(null);
+  const [storeCreditAmount, setStoreCreditAmount] = useState("");
+  const [storeCreditSaving, setStoreCreditSaving] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -1082,46 +1098,74 @@ export default function Page() {
                 </select>
               </div>
               <div className="admin-table-wrap" style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 90px 100px 1fr", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${THEME.border}`, fontWeight: 700, fontSize: 11, color: THEME.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, minWidth: 640 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 90px 90px 100px 1fr 32px", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${THEME.border}`, fontWeight: 700, fontSize: 11, color: THEME.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, minWidth: 720 }}>
                   <div>Affiliate</div>
-                  <div>Product</div>
+                  <div>Order #</div>
                   <div>Source</div>
                   <div>Sale</div>
                   <div>Commission</div>
                   <div>Status</div>
                   <div>Actions</div>
+                  <div />
                 </div>
-                {conversions.map(c => (
-                  <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 90px 100px 1fr", gap: 12, padding: "14px 20px", borderBottom: `1px solid ${THEME.border}`, alignItems: "center", minWidth: 640 }}>
-                    <div>
-                      <div style={{ color: THEME.text, fontSize: 13, fontWeight: 600 }}>{c.affiliate.name}</div>
-                      <div style={{ color: THEME.textMuted, fontSize: 11 }}>{c.affiliate.email}</div>
-                    </div>
-                    <div style={{ color: THEME.textMuted, fontSize: 12 }}>{c.product || "—"}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span style={{ background: (c.source === "woocommerce" ? "#dcfce7" : "#e0f2fe"), color: (c.source === "woocommerce" ? THEME.success : THEME.accentLight), border: `1px solid ${(c.source === "woocommerce" ? THEME.success : THEME.accentLight)}60`, borderRadius: 4, padding: "2px 6px", fontSize: 10, fontWeight: 700, width: "fit-content" }}>
-                        {c.source === "woocommerce" ? "WOO" : "MANUAL"}
-                      </span>
-                      {c.source === "woocommerce" && c.orderId && (
-                        settings.wcStoreUrl
-                          ? <a href={`${settings.wcStoreUrl.replace(/\/$/, "")}/wp-admin/post.php?post=${c.orderId}&action=edit`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: THEME.accentLight }}>#{c.orderId}</a>
-                          : <span style={{ fontSize: 11, color: THEME.textMuted }}>#{c.orderId}</span>
+                {conversions.map(c => {
+                  const wcBase = (settings.wcStoreUrl || "https://biolongevitylabs.com").replace(/\/$/, "");
+                  const orderLink = c.orderId ? `${wcBase}/wp-admin/post.php?post=${c.orderId}&action=edit` : null;
+                  const isExpanded = convExpandedId === c.id;
+                  const items = Array.isArray(c.orderItems) ? c.orderItems as OrderItemRow[] : [];
+                  return (
+                    <React.Fragment key={c.id}>
+                      <div onClick={() => setConvExpandedId(isExpanded ? null : c.id)} style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 90px 90px 100px 1fr 32px", gap: 12, padding: "14px 20px", borderBottom: `1px solid ${THEME.border}`, alignItems: "center", minWidth: 720, cursor: "pointer", background: isExpanded ? "#f8f9fa" : undefined }}>
+                        <div>
+                          <div style={{ color: THEME.text, fontSize: 13, fontWeight: 600 }}>{c.affiliate.name}</div>
+                          <div style={{ color: THEME.textMuted, fontSize: 11 }}>{c.affiliate.email}</div>
+                        </div>
+                        <div>
+                          {c.source === "woocommerce" && orderLink ? (
+                            <a href={orderLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 12, color: THEME.accentLight, fontWeight: 600 }}>#{c.orderNumber || c.orderId}</a>
+                          ) : c.orderNumber || c.orderId ? (
+                            <span style={{ fontSize: 12, color: THEME.textMuted }}>#{c.orderNumber || c.orderId}</span>
+                          ) : (
+                            <span style={{ color: THEME.textMuted }}>—</span>
+                          )}
+                        </div>
+                        <div>
+                          <span style={{ background: (c.source === "woocommerce" ? "#dcfce7" : "#e0f2fe"), color: (c.source === "woocommerce" ? THEME.success : THEME.accentLight), border: `1px solid ${(c.source === "woocommerce" ? THEME.success : THEME.accentLight)}60`, borderRadius: 4, padding: "2px 6px", fontSize: 10, fontWeight: 700 }}>
+                            {c.source === "woocommerce" ? "WOO" : "MANUAL"}
+                          </span>
+                        </div>
+                        <div style={{ color: THEME.warning, fontFamily: "monospace", fontSize: 13 }}>${c.amount.toFixed(2)}</div>
+                        <div style={{ color: THEME.accentLight, fontFamily: "monospace", fontSize: 13 }}>${commission(c).toFixed(2)}</div>
+                        <div><StatusBadge status={c.status} /></div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }} onClick={e => e.stopPropagation()}>
+                          {c.status === "pending" && (
+                            <button onClick={() => updateConversionStatus(c.id, "approved")} style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#dbeafe", color: THEME.accentLight, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
+                          )}
+                          {c.status === "approved" && (
+                            <button onClick={() => updateConversionStatus(c.id, "paid")} style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#ede9fe", color: "#6d28d9", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Mark paid</button>
+                          )}
+                          {c.status === "paid" && c.paidAt && <span style={{ color: THEME.textMuted, fontSize: 11 }}>Paid {new Date(c.paidAt).toLocaleDateString()}</span>}
+                        </div>
+                        <div style={{ color: THEME.textMuted, fontSize: 14 }}>{isExpanded ? "▼" : "▶"}</div>
+                      </div>
+                      {isExpanded && (
+                        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${THEME.border}`, background: "#f8f9fa", fontSize: 13 }}>
+                          <div style={{ fontWeight: 700, color: THEME.text, marginBottom: 8 }}>Order details</div>
+                          {(items.length > 0 ? items : [{ name: c.product || "Sale", quantity: 1, total: String(c.amount) }]).map((item, i) => (
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${THEME.border}` }}>
+                              <span style={{ color: THEME.text }}>{item.name ?? "Product"}</span>
+                              <span style={{ color: THEME.textMuted }}>{item.quantity ?? 1} × ${item.total ?? c.amount.toFixed(2)}</span>
+                            </div>
+                          ))}
+                          {(c.customerName || c.customerCity) && (
+                            <div style={{ marginTop: 8, color: THEME.textMuted }}>Customer: {[c.customerName, c.customerCity].filter(Boolean).join(", ")}</div>
+                          )}
+                          {c.paidAt && <div style={{ marginTop: 4, color: THEME.textMuted }}>Credited: {new Date(c.paidAt).toLocaleDateString()}</div>}
+                        </div>
                       )}
-                    </div>
-                    <div style={{ color: THEME.warning, fontFamily: "monospace", fontSize: 13 }}>${c.amount.toFixed(2)}</div>
-                    <div style={{ color: THEME.accentLight, fontFamily: "monospace", fontSize: 13 }}>${commission(c).toFixed(2)}</div>
-                    <div><StatusBadge status={c.status} /></div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                      {c.status === "pending" && (
-                        <button onClick={() => updateConversionStatus(c.id, "approved")} style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#dbeafe", color: THEME.accentLight, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approve</button>
-                      )}
-                      {c.status === "approved" && (
-                        <button onClick={() => updateConversionStatus(c.id, "paid")} style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#ede9fe", color: "#6d28d9", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Mark paid</button>
-                      )}
-                      {c.status === "paid" && c.paidAt && <span style={{ color: THEME.textMuted, fontSize: 11 }}>Paid {new Date(c.paidAt).toLocaleDateString()}</span>}
-                    </div>
-                  </div>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
                 {conversions.length === 0 && <div style={{ color: THEME.textMuted, fontSize: 13, textAlign: "center", padding: 40 }}>No conversions in this range</div>}
               </div>
             </>
@@ -1214,6 +1258,34 @@ export default function Page() {
                           </div>
                           {aff.slug && <div style={{ color: THEME.textMuted, fontSize: 10, marginBottom: 2 }}>Legacy: {legacyLink} — Old link still works</div>}
                           {recruitLink && <div style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace", marginBottom: 4 }}>Recruit: {recruitLink}</div>}
+                          <div style={{ marginBottom: 8, fontSize: 12 }}>
+                            <span style={{ color: THEME.textMuted, marginRight: 6 }}>Coupon code:</span>
+                            {editingCouponId !== aff.id ? (
+                              <>
+                                <span style={{ color: THEME.text, fontFamily: "monospace", fontWeight: 600 }}>{aff.couponCode || "—"}</span>
+                                <button type="button" onClick={() => { setEditingCouponId(aff.id); setCouponEditValue(aff.couponCode ?? ""); }} style={{ marginLeft: 8, padding: "2px 8px", fontSize: 10, background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer", color: THEME.textMuted }}>Edit</button>
+                              </>
+                            ) : (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <input
+                                  value={couponEditValue}
+                                  onChange={(e) => setCouponEditValue(e.target.value.trim().toUpperCase().slice(0, 32))}
+                                  placeholder="e.g. SARABETH15"
+                                  style={{ width: 140, padding: "4px 8px", fontSize: 12, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 4 }}
+                                />
+                                <button type="button" disabled={couponSaving} onClick={async () => {
+                                  setCouponSaving(true);
+                                  try {
+                                    await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ couponCode: couponEditValue.trim() || null }) });
+                                    fetchAffiliates();
+                                    setEditingCouponId(null);
+                                    setCouponEditValue("");
+                                  } finally { setCouponSaving(false); }
+                                }} style={{ padding: "4px 10px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: couponSaving ? "not-allowed" : "pointer" }}>{couponSaving ? "…" : "Save"}</button>
+                                <button type="button" onClick={() => { setEditingCouponId(null); setCouponEditValue(""); }} style={{ padding: "4px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+                              </span>
+                            )}
+                          </div>
                           <VolumeProgressBar monthlyRevenue={monthlyRev} nextThreshold={vol.nextThreshold} progress={vol.progress} />
                           {parent && (
                             <div style={{ color: THEME.textMuted, fontSize: 11, marginTop: 4 }}>
@@ -1441,8 +1513,8 @@ export default function Page() {
                 <StatCard label="Active Affiliates" value={activeAffiliates.length} accent="#3a8a5a" />
               </div>
               <div className="admin-table-wrap" style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 90px 90px 120px 100px", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${THEME.border}`, fontWeight: 700, fontSize: 11, color: THEME.textMuted, textTransform: "uppercase" as const, minWidth: 640 }}>
-                  <div>Affiliate</div><div>State</div><div>Rate</div><div>Unpaid</div><div>Paid</div><div>History</div><div></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 90px 90px 80px 120px 120px", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${THEME.border}`, fontWeight: 700, fontSize: 11, color: THEME.textMuted, textTransform: "uppercase" as const, minWidth: 720 }}>
+                  <div>Affiliate</div><div>State</div><div>Rate</div><div>Unpaid</div><div>Paid</div><div>Store credit</div><div>History</div><div></div>
                 </div>
                 {activeAffiliates.map((aff, i) => {
                   const vol = getVolumeTier(getCurrentMonthRevenue(aff.conversions));
@@ -1454,20 +1526,23 @@ export default function Page() {
                   const totalUnpaid = unpaidConv + mlm;
                   const totalPaid = aff.payouts?.reduce((x, p) => x + p.amount, 0) ?? 0;
                   const payNowAmount = approvedCommission + mlmApproved;
+                  const storeCredit = typeof aff.storeCredit === "number" ? aff.storeCredit : 0;
                   return (
-                    <div key={aff.id} style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 90px 90px 120px 100px", gap: 12, padding: "14px 20px", borderBottom: i < activeAffiliates.length - 1 ? `1px solid ${THEME.border}` : "none", alignItems: "center", minWidth: 640 }}>
+                    <div key={aff.id} style={{ display: "grid", gridTemplateColumns: "1fr 70px 80px 90px 90px 80px 120px 120px", gap: 12, padding: "14px 20px", borderBottom: i < activeAffiliates.length - 1 ? `1px solid ${THEME.border}` : "none", alignItems: "center", minWidth: 720 }}>
                       <div style={{ color: THEME.text, fontSize: 13 }}>{aff.name}<br /><span style={{ color: THEME.textMuted, fontSize: 11 }}>{aff.email}</span></div>
                       <div style={{ color: THEME.textMuted, fontSize: 12 }}>{aff.state || "—"}</div>
                       <div><TierBadge tier={vol.tierKey} showTooltip TIERS={TIERS} /><span style={{ color: THEME.accentLight, fontSize: 11, marginLeft: 4 }}>{vol.rate}%</span></div>
                       <div style={{ color: THEME.warning, fontFamily: "monospace", fontSize: 13 }}>${totalUnpaid.toFixed(2)}</div>
                       <div style={{ color: "#6d28d9", fontFamily: "monospace", fontSize: 13 }}>${totalPaid.toFixed(2)}</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 12, color: THEME.text }}>${storeCredit.toFixed(2)}</div>
                       <div style={{ fontSize: 11, color: THEME.textMuted }}>
                         {aff.payouts?.length ? aff.payouts.slice(0, 3).map(p => (
                           <div key={p.id}>${p.amount.toFixed(0)} {PAYMENT_METHODS.find(m => m.value === p.method)?.label ?? p.method} {new Date(p.paidAt).toLocaleDateString()}</div>
                         )) : "—"}
                       </div>
-                      <div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {payNowAmount > 0 && <button onClick={() => openPayModal(aff.id, aff.name, payNowAmount, aff.tipaltiStatus)} style={{ padding: "4px 10px", background: "#ede9fe", border: "none", borderRadius: 4, color: "#6d28d9", cursor: "pointer", fontSize: 11 }}>Pay Now</button>}
+                        <button onClick={() => { setStoreCreditModal({ affId: aff.id, affName: aff.name }); setStoreCreditAmount(""); }} style={{ padding: "4px 10px", background: "#f0f7ff", border: `1px solid ${THEME.accent}`, borderRadius: 4, color: THEME.accent, cursor: "pointer", fontSize: 11 }}>Give Store Credit</button>
                       </div>
                     </div>
                   );
@@ -1580,6 +1655,37 @@ export default function Page() {
             <div style={{ display: "flex", gap: 12 }}>
               <button onClick={() => { setShowPayModal(false); setPayModalData(null); }} style={{ flex: 1, padding: "11px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
               <button onClick={confirmPayModal} style={{ flex: 2, padding: "11px 0", background: "#6d28d9", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700 }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Give Store Credit Modal */}
+      {storeCreditModal && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 32, width: 400 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+              <div style={{ color: THEME.text, fontSize: 18, fontWeight: 700 }}>Give Store Credit — {storeCreditModal.affName}</div>
+              <button onClick={() => { setStoreCreditModal(null); setStoreCreditAmount(""); }} style={{ background: "none", border: "none", color: THEME.textMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ color: THEME.textMuted, fontSize: 12, display: "block", marginBottom: 6, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1 }}>Amount ($)</label>
+              <input type="number" step="0.01" min="0" value={storeCreditAmount} onChange={e => setStoreCreditAmount(e.target.value)} placeholder="0.00"
+                style={{ width: "100%", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px", color: THEME.text, fontSize: 14, outline: "none" }} />
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button onClick={() => { setStoreCreditModal(null); setStoreCreditAmount(""); }} style={{ flex: 1, padding: "11px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+              <button disabled={storeCreditSaving || !storeCreditAmount || Number(storeCreditAmount) <= 0} onClick={async () => {
+                const amt = Number(storeCreditAmount);
+                if (!(amt > 0)) return;
+                setStoreCreditSaving(true);
+                try {
+                  await fetch("/api/affiliates/" + storeCreditModal.affId, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ storeCreditAdd: amt }) });
+                  fetchAffiliates();
+                  setStoreCreditModal(null);
+                  setStoreCreditAmount("");
+                } finally { setStoreCreditSaving(false); }
+              }} style={{ flex: 2, padding: "11px 0", background: THEME.accent, border: "none", borderRadius: 8, color: "#fff", cursor: storeCreditSaving ? "not-allowed" : "pointer", fontWeight: 700 }}>{storeCreditSaving ? "Adding…" : "Add store credit"}</button>
             </div>
           </div>
         </div>

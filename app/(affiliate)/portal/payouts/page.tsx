@@ -22,8 +22,10 @@ type MeResponse = {
     name: string;
     tipaltiStatus: string | null;
     payouts: { id: string; amount: number; method: string; paidAt: string; payoutStatus: string | null }[];
+    storeCredit?: number;
   };
   pendingPayout?: number;
+  storeCredit?: number;
 };
 
 export default function PortalPayoutsPage() {
@@ -69,6 +71,14 @@ export default function PortalPayoutsPage() {
         <p style={{ fontSize: 28, fontWeight: 800, color: THEME.success }}>${(data.pendingPayout ?? 0).toFixed(2)}</p>
         <p style={{ fontSize: 13, color: THEME.textMuted }}>This amount will be paid out according to the program’s payout schedule once banking is set up and approved.</p>
       </div>
+
+      {((data.storeCredit ?? aff.storeCredit ?? 0) > 0) && (
+        <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: THEME.text }}>Store credit balance</h2>
+          <p style={{ fontSize: 28, fontWeight: 800, color: THEME.accent }}>${(data.storeCredit ?? aff.storeCredit ?? 0).toFixed(2)}</p>
+          <p style={{ fontSize: 13, color: THEME.textMuted }}>Store credit can be used on biolongevitylabs.com — contact us to apply.</p>
+        </div>
+      )}
 
       <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: THEME.text }}>Payment history</h2>

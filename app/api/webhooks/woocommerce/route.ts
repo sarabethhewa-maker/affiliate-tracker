@@ -107,6 +107,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'Refund handled' });
     }
 
+    // On order status change: update existing conversion's orderStatus (and optionally mark confirmed when completed)
+    const existingConversion = await prisma.conversion.findUnique({
+      where: { orderId },
+    });
+    if (existingConversion) {
+      const orderItemsUpdate = details.orderItems.length > 0
+        ? (details.orderItems as unknown as object)
+        : (existingConversion.orderItems != null ? existingConversion.orderItems as object : undefined);
+      await prisma.conversion.update({
+        where: { orderId },
+        data: {
+          orderNumber: details.orderNumber ?? existingConversion.orderNumber,
+          orderStatus: details.orderStatus ?? status,
+          ...(orderItemsUpdate !== undefined && { orderItems: orderItemsUpdate }),
+          customerName: details.customerName ?? existingConversion.customerName,
+          customerCity: details.customerCity ?? existingConversion.customerCity,
+          amount: total,
+          ...(status === 'completed' ? { status: 'approved' as const } : {}),
+        },
+      });
+      return NextResponse.json({ ok: true, message: 'Order status updated' });
+    }
+
     if (status !== 'completed' && status !== 'processing') {
       return NextResponse.json({ ok: true, message: 'Status ignored' });
     }
@@ -133,10 +156,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'No affiliate ref or coupon match' });
     }
 
-    const existing = await prisma.conversion.findUnique({
-      where: { orderId },
-    });
-
     const conversionData = {
       orderNumber: details.orderNumber,
       orderStatus: details.orderStatus ?? status,
@@ -145,38 +164,18 @@ export async function POST(req: NextRequest) {
       customerCity: details.customerCity ?? undefined,
     };
 
-    if (existing) {
-      const on = conversionData.orderNumber ?? existing.orderNumber;
-      const os = conversionData.orderStatus ?? existing.orderStatus;
-      const oi = conversionData.orderItems ?? existing.orderItems;
-      const cn = conversionData.customerName ?? existing.customerName;
-      const cc = conversionData.customerCity ?? existing.customerCity;
-      await prisma.conversion.update({
-        where: { orderId },
-        data: {
-          amount: total,
-          orderNumber: on ?? undefined,
-          orderStatus: os ?? undefined,
-          orderItems: oi != null ? (oi as object) : undefined,
-          customerName: cn ?? undefined,
-          customerCity: cc ?? undefined,
-        },
-      });
-      return NextResponse.json({ ok: true, message: 'Order updated' });
-    }
-
     await prisma.conversion.create({
       data: {
         affiliateId: affiliate.id,
         amount: total,
         orderId,
         source: 'woocommerce',
-        status: 'pending',
-        orderNumber: details.orderNumber ?? undefined,
-        orderStatus: details.orderStatus ?? status,
-        orderItems: details.orderItems.length > 0 ? (details.orderItems as unknown as object) : undefined,
-        customerName: details.customerName ?? undefined,
-        customerCity: details.customerCity ?? undefined,
+        status: status === 'completed' ? 'approved' : 'pending',
+        orderNumber: conversionData.orderNumber ?? undefined,
+        orderStatus: conversionData.orderStatus ?? status,
+        orderItems: conversionData.orderItems ?? undefined,
+        customerName: conversionData.customerName ?? undefined,
+        customerCity: conversionData.customerCity ?? undefined,
       },
     });
     await recalculateTiers();
