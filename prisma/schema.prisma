@@ -8,17 +8,26 @@ datasource db {
 }
 
 model Affiliate {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  tier        String   @default("silver")
-  status      String   @default("active")
-  parentId    String?
-  parent      Affiliate?  @relation("AffiliateTree", fields: [parentId], references: [id])
-  children    Affiliate[] @relation("AffiliateTree")
-  clicks      Click[]
-  conversions Conversion[]
-  createdAt   DateTime @default(now())
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  tier             String    @default("silver")
+  status           String    @default("active") // active | pending | rejected
+  state            String?
+  referralCode     String?   @unique
+  parentId         String?
+  phone            String?
+  socialHandle     String?
+  howDidYouHear    String?
+  tipaltiPayeeId   String?   // Tipalti idap (we use affiliate id as idap)
+  tipaltiStatus    String?   // pending | active | blocked
+  notes            String?   // private admin notes, never shown to affiliate
+  parent           Affiliate?   @relation("AffiliateTree", fields: [parentId], references: [id])
+  children         Affiliate[]  @relation("AffiliateTree")
+  clicks           Click[]
+  conversions      Conversion[]
+  payouts          Payout[]
+  createdAt        DateTime  @default(now())
 }
 
 model Click {
@@ -35,5 +44,48 @@ model Conversion {
   affiliateId String
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
   amount      Float
+  status      String    @default("pending") // pending | approved | paid
+  product     String?
+  note        String?
+  orderId     String?   @unique // WooCommerce order ID when source is woocommerce
+  source      String?   // "woocommerce" | "manual" etc.
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Payout {
+  id              String    @id @default(cuid())
+  affiliateId     String
+  affiliate       Affiliate @relation(fields: [affiliateId], references: [id])
+  amount          Float
+  method          String    @default("other") // paypal | venmo_zelle | ach | tipalti | other
+  note            String?
+  tipaltiRefCode  String?   // Tipalti payment ref for webhook matching
+  payoutStatus    String?   @default("pending") // pending | confirmed | failed (for Tipalti)
+  paidAt          DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String    @id @default(cuid())
+  type        String    // conversion | affiliate_approved | tier_upgrade | payout
+  message     String
+  affiliateId String?
+  createdAt   DateTime  @default(now())
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  affiliateId String
+  type        String    // click_spike | ip_abuse
+  message     String
+  dismissed   Boolean   @default(false)
   createdAt   DateTime  @default(now())
 }

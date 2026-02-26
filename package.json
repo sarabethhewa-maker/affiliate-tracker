@@ -10,14 +10,23 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.38.2",
+    "@mailchimp/mailchimp_marketing": "^3.0.80",
     "@prisma/client": "^6.19.2",
+    "axios": "^1.13.5",
+    "canvas-confetti": "^1.9.4",
+    "html2canvas": "^1.4.1",
+    "klaviyo-api": "^21.0.0",
     "next": "16.1.6",
     "prisma": "^6.19.2",
+    "qrcode": "^1.5.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-qr-code": "^2.0.18",
+    "resend": "^6.9.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
