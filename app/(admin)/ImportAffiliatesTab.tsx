@@ -69,6 +69,7 @@ type ImportLogEntry = {
   skippedCount: number;
   errorCount: number;
   createdAt: string;
+  details?: { errors?: { row: number; email: string; message: string }[] };
 };
 
 export default function ImportAffiliatesTab({ onImport }: { onImport: () => void }) {
@@ -86,6 +87,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
     updated: number;
     skipped: number;
     errors: number;
+    errorDetails?: { row: number; email: string; message: string }[];
     summary?: {
       tierBreakdown?: { silver: number; gold: number; master: number };
       totalHistoricalRevenue?: number;
@@ -93,6 +95,8 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
       skippedReasons?: { row: number; reason: string }[];
     };
   } | null>(null);
+  const [showErrorList, setShowErrorList] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [pasteParsed, setPasteParsed] = useState<ImportRow[]>([]);
   const [pasteTier, setPasteTier] = useState("0");
@@ -146,8 +150,10 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
             updated: data.updated ?? 0,
             skipped: data.skipped ?? 0,
             errors: data.errors ?? 0,
+            errorDetails: data.errorDetails ?? undefined,
             summary: data.summary ?? undefined,
           });
+          setShowErrorList(false);
           onImport();
           loadImportLogs();
         } else {
@@ -618,12 +624,29 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
         {importResult && (
           <div style={{ marginTop: 16, padding: 20, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: THEME.text, marginBottom: 16 }}>Import complete</div>
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 16, alignItems: "center" }}>
               <span style={{ color: THEME.success, fontWeight: 700, fontSize: 15 }}>{importResult.imported} imported</span>
               <span style={{ color: THEME.textMuted, fontSize: 14 }}>{importResult.updated} updated</span>
               <span style={{ color: THEME.warning, fontSize: 14 }}>{importResult.skipped} skipped</span>
-              <span style={{ color: importResult.errors ? THEME.error : THEME.textMuted, fontSize: 14 }}>{importResult.errors} errors</span>
+              {importResult.errors > 0 ? (
+                <button type="button" onClick={() => setShowErrorList((v) => !v)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: THEME.error, fontSize: 14, fontWeight: 600, textDecoration: "underline" }}>{importResult.errors} errors (click to see details)</button>
+              ) : (
+                <span style={{ color: THEME.textMuted, fontSize: 14 }}>0 errors</span>
+              )}
             </div>
+            {showErrorList && importResult.errorDetails && importResult.errorDetails.length > 0 && (
+              <div style={{ marginBottom: 16, padding: 12, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, maxHeight: 280, overflowY: "auto" }}>
+                <div style={{ fontWeight: 700, color: "#b91c1c", marginBottom: 8, fontSize: 13 }}>Failed rows</div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: THEME.text }}>
+                  {importResult.errorDetails.slice(0, 50).map((err, idx) => (
+                    <li key={idx} style={{ marginBottom: 6 }}>
+                      <strong>Row {err.row}</strong> ({err.email}): {err.message}
+                    </li>
+                  ))}
+                  {importResult.errorDetails.length > 50 && <li style={{ color: THEME.textMuted }}>… and {importResult.errorDetails.length - 50} more</li>}
+                </ul>
+              </div>
+            )}
             {importResult.summary && (
               <>
                 {importResult.summary.tierBreakdown && (
@@ -704,14 +727,35 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
               </thead>
               <tbody>
                 {importLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: `1px solid ${THEME.border}` }}>
-                    <td style={{ padding: 8 }}>{new Date(log.createdAt).toLocaleString()}</td>
-                    <td style={{ padding: 8 }}>{log.method}</td>
-                    <td style={{ padding: 8, textAlign: "right" }}>{log.totalCount}</td>
-                    <td style={{ padding: 8, textAlign: "right", color: THEME.success }}>{log.importedCount}</td>
-                    <td style={{ padding: 8, textAlign: "right", color: THEME.warning }}>{log.skippedCount}</td>
-                    <td style={{ padding: 8, textAlign: "right", color: log.errorCount ? THEME.error : THEME.textMuted }}>{log.errorCount}</td>
-                  </tr>
+                  <React.Fragment key={log.id}>
+                    <tr style={{ borderBottom: `1px solid ${THEME.border}` }}>
+                      <td style={{ padding: 8 }}>{new Date(log.createdAt).toLocaleString()}</td>
+                      <td style={{ padding: 8 }}>{log.method}</td>
+                      <td style={{ padding: 8, textAlign: "right" }}>{log.totalCount}</td>
+                      <td style={{ padding: 8, textAlign: "right", color: THEME.success }}>{log.importedCount}</td>
+                      <td style={{ padding: 8, textAlign: "right", color: THEME.warning }}>{log.skippedCount}</td>
+                      <td style={{ padding: 8, textAlign: "right" }}>
+                        {log.errorCount > 0 ? (
+                          <button type="button" onClick={() => setExpandedLogId((id) => (id === log.id ? null : log.id))} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: THEME.error, fontWeight: 600, textDecoration: "underline" }}>{log.errorCount} errors</button>
+                        ) : (
+                          <span style={{ color: THEME.textMuted }}>0</span>
+                        )}
+                      </td>
+                    </tr>
+                    {expandedLogId === log.id && log.details?.errors && log.details.errors.length > 0 && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "12px 16px", background: "#fef2f2", borderBottom: `1px solid ${THEME.border}`, fontSize: 12 }}>
+                          <div style={{ fontWeight: 600, color: "#b91c1c", marginBottom: 8 }}>Failed rows</div>
+                          <ul style={{ margin: 0, paddingLeft: 20 }}>
+                            {log.details.errors.slice(0, 30).map((err, idx) => (
+                              <li key={idx} style={{ marginBottom: 4 }}><strong>Row {err.row}</strong> ({err.email}): {err.message}</li>
+                            ))}
+                            {log.details.errors.length > 30 && <li style={{ color: THEME.textMuted }}>… and {log.details.errors.length - 30} more</li>}
+                          </ul>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

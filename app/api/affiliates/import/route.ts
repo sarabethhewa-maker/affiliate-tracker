@@ -45,6 +45,16 @@ function ensureEmail(row: ImportAffiliate, index: number): string {
   return `import-${base.slice(0, 12)}-${index}-${Date.now().toString(36)}@imported.placeholder`;
 }
 
+function toNum(v: unknown): number {
+  if (typeof v === 'number' && !Number.isNaN(v)) return v;
+  const n = Number(v);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+function toInt(v: unknown): number {
+  return Math.floor(toNum(v)) || 0;
+}
+
 export async function POST(req: NextRequest) {
   const err = await requireAdmin();
   if (err) return err;
@@ -93,6 +103,18 @@ export async function POST(req: NextRequest) {
       }
 
       const email = ensureEmail(row, i);
+
+      if (skipDuplicates) {
+        const existingByName = await prisma.affiliate.findFirst({
+          where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+        });
+        if (existingByName) {
+          skipped++;
+          skippedReasons.push({ row: i + 1, reason: `Duplicate name: "${name}"` });
+          continue;
+        }
+      }
+
       const existing = await prisma.affiliate.findUnique({
         where: { email },
       });
@@ -145,18 +167,17 @@ export async function POST(req: NextRequest) {
         if (referrer) parentId = referrer.id;
       }
 
-      const totalRevenue = typeof row.totalRevenue === 'number' ? row.totalRevenue : Number(row.totalRevenue) || 0;
-      const totalPayout = typeof row.totalPayout === 'number' ? row.totalPayout : Number(row.totalPayout) || 0;
+      const totalRevenue = toNum(row.totalRevenue);
+      const totalPayout = toNum(row.totalPayout);
       const tierIndex =
         totalRevenue > 0
           ? getTierIndexForRevenue(totalRevenue, settings.tiers)
           : parseInt(normalizeTier(row.tier), 10) ?? 0;
 
-      const num = (v: number | undefined) => (typeof v === 'number' && !Number.isNaN(v) ? v : 0);
-      const grossConv = num(row.grossConversions) || num(row.totalConversions) || 0;
-      const approvedConv = num(row.approvedConversions) || 0;
-      const rejectedConv = num(row.rejectedConversions) || 0;
-      const pendingConv = num(row.pendingConversions) || 0;
+      const grossConv = toInt(row.grossConversions) || toInt(row.totalConversions) || 0;
+      const approvedConv = toInt(row.approvedConversions) || 0;
+      const rejectedConv = toInt(row.rejectedConversions) || 0;
+      const pendingConv = toInt(row.pendingConversions) || 0;
 
       try {
         const slug = await generateUniqueSlug(prisma, slugFromName(name));
@@ -193,10 +214,16 @@ export async function POST(req: NextRequest) {
 
         imported++;
       } catch (e) {
+        const err = e as Error & { code?: string; meta?: unknown };
+        const fullMessage = err?.message ?? String(e);
+        const code = err?.code != null ? ` [${err.code}]` : '';
+        const meta = err?.meta != null ? ` ${JSON.stringify(err.meta)}` : '';
+        const detail = `${fullMessage}${code}${meta}`;
+        console.error(`[api/affiliates/import] Row ${i + 1} (${name}):`, detail, e);
         errors.push({
           row: i + 1,
           email,
-          message: e instanceof Error ? e.message : 'Create failed',
+          message: detail,
         });
       }
     }

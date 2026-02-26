@@ -6,9 +6,12 @@ const SLUG_MIN = 3;
 const SLUG_MAX = 30;
 const SLUG_REGEX = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
 
+/** Strip special chars, lowercase, spaces to hyphens, collapse hyphens. */
 export function sanitizeSlug(raw: string): string {
-  const s = raw
+  const s = String(raw ?? '')
     .toLowerCase()
+    .replace(/[''".,\/\\&()]/g, '')
+    .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
@@ -21,10 +24,12 @@ export function isValidSlug(slug: string): boolean {
   return SLUG_REGEX.test(slug);
 }
 
-/** Base slug from first name only (e.g. "Sarabeth Hewa" -> "sarabeth"). */
+/** Base slug from full name: strip special chars, hyphenate (e.g. "Sarabeth Hewa" -> "sarabeth-hewa"). */
 export function slugFromName(name: string): string {
-  const first = name.trim().split(/\s+/)[0] ?? name;
-  return sanitizeSlug(first) || sanitizeSlug(name) || 'affiliate';
+  const trimmed = String(name ?? '').trim();
+  if (!trimmed) return 'affiliate';
+  const base = sanitizeSlug(trimmed);
+  return base.length >= SLUG_MIN ? base : (sanitizeSlug(trimmed.replace(/\s+/g, '-')) || 'affiliate');
 }
 
 /** Slug from full name hyphenated (e.g. "Sarabeth Hewa" -> "sarabeth-hewa"). */
@@ -57,7 +62,7 @@ export async function generateUniqueSlug(
 
   let n = 0;
   while (true) {
-    const slug = n === 0 ? candidate : `${candidate}${n}`;
+    const slug = n === 0 ? candidate : `${candidate}-${n + 1}`;
     if (slug.length > SLUG_MAX) {
       n++;
       continue;
