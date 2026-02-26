@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import PortalLanding from "./PortalLanding";
 import PendingScreen from "./PendingScreen";
+
+const LOADING_TIMEOUT_MS = 3000;
 
 type MeResponse =
   | { noApplication: true; email?: string }
@@ -17,6 +19,8 @@ export default function PortalGate() {
   const router = useRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLandingAfterTimeout, setShowLandingAfterTimeout] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchMe = useCallback(async () => {
     const res = await fetch("/api/me/affiliate");
@@ -28,6 +32,16 @@ export default function PortalGate() {
       json = {};
     }
     setMe(json);
+  }, []);
+
+  // After 3 seconds, show landing page so visitors are never stuck on Loading
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      setShowLandingAfterTimeout(true);
+    }, LOADING_TIMEOUT_MS);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -47,6 +61,11 @@ export default function PortalGate() {
       router.replace("/portal/dashboard");
     }
   }, [me, router]);
+
+  // If timeout fired, show landing so we never leave users stuck on Loading
+  if (showLandingAfterTimeout && (loading || !isLoaded)) {
+    return <PortalLanding />;
+  }
 
   if (!isLoaded || loading) {
     return (
