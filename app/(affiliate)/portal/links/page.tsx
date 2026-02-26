@@ -45,6 +45,13 @@ export default function PortalLinksPage() {
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [slugSaving, setSlugSaving] = useState(false);
   const [slugSuccess, setSlugSuccess] = useState(false);
+  const [productUrl, setProductUrl] = useState("");
+  const [productLinkError, setProductLinkError] = useState("");
+  const [generatedProductLink, setGeneratedProductLink] = useState<{ trackedUrl: string; originalUrl: string } | null>(null);
+  const [productLinkGenerating, setProductLinkGenerating] = useState(false);
+  const [copiedProductLink, setCopiedProductLink] = useState(false);
+  const [generatedLinksHistory, setGeneratedLinksHistory] = useState<{ id: string; originalUrl: string; trackedUrl: string; createdAt: string }[]>([]);
+  const [productLinkQrRef, setProductLinkQrRef] = useState<HTMLDivElement | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +70,17 @@ export default function PortalLinksPage() {
   useEffect(() => {
     setOnboardingVisitedLinks();
   }, []);
+
+  const fetchGeneratedLinks = useCallback(async () => {
+    if (!data?.affiliate) return;
+    fetch("/api/affiliate/generated-links")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => setGeneratedLinksHistory(Array.isArray(list) ? list : []))
+      .catch(() => setGeneratedLinksHistory([]));
+  }, [data?.affiliate]);
+  useEffect(() => {
+    fetchGeneratedLinks();
+  }, [fetchGeneratedLinks]);
 
   useEffect(() => {
     if (!slugEditValue.trim() || slugEditValue.length < 3) {
@@ -241,6 +259,123 @@ export default function PortalLinksPage() {
           </div>
         </div>
       )}
+
+      {/* Product Link Generator */}
+      <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: THEME.text }}>Product Link Generator</h2>
+        <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 16 }}>Create tracked links to specific product pages on biolongevitylabs.com. When someone clicks your link and buys, you get credit.</p>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Paste any product URL from biolongevitylabs.com</label>
+          <input
+            type="url"
+            value={productUrl}
+            onChange={(e) => { setProductUrl(e.target.value); setProductLinkError(""); setGeneratedProductLink(null); }}
+            placeholder="https://biolongevitylabs.com/product/example-product"
+            style={{ width: "100%", maxWidth: 480, padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8, background: THEME.bg }}
+          />
+          {productLinkError && <p style={{ color: "#b91c1c", fontSize: 13, marginTop: 6 }}>{productLinkError}</p>}
+        </div>
+        <button
+          type="button"
+          disabled={productLinkGenerating || !productUrl.trim()}
+          onClick={async () => {
+            setProductLinkError("");
+            setGeneratedProductLink(null);
+            setProductLinkGenerating(true);
+            try {
+              const res = await fetch("/api/affiliate/generate-link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ originalUrl: productUrl.trim() }) });
+              const data = await res.json();
+              if (!res.ok) {
+                setProductLinkError(data.error || "Invalid URL. Use a product page from biolongevitylabs.com.");
+                return;
+              }
+              setGeneratedProductLink({ trackedUrl: data.trackedUrl, originalUrl: data.originalUrl });
+              fetchGeneratedLinks();
+            } catch {
+              setProductLinkError("Something went wrong. Try again.");
+            } finally {
+              setProductLinkGenerating(false);
+            }
+          }}
+          style={{ padding: "10px 20px", background: productLinkGenerating || !productUrl.trim() ? THEME.border : "#1a4a8a", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: productLinkGenerating || !productUrl.trim() ? "not-allowed" : "pointer", fontSize: 14 }}
+        >
+          {productLinkGenerating ? "Generating…" : "Generate Link"}
+        </button>
+
+        {generatedProductLink && (
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${THEME.border}` }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: THEME.text, marginBottom: 8 }}>Your tracked link</p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+              <code style={{ flex: 1, minWidth: 200, padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 13, wordBreak: "break-all" }}>{generatedProductLink.trackedUrl}</code>
+              <button type="button" onClick={() => copyToClipboard(generatedProductLink.trackedUrl, setCopiedProductLink)} style={{ padding: "10px 16px", background: copiedProductLink ? THEME.success : "#1a4a8a", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
+                {copiedProductLink ? "Copied" : "Copy Link"}
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 16 }}>When someone clicks this link, they&apos;ll land on the product page and you&apos;ll get credit for any purchase they make within the cookie window.</p>
+            <div style={{ marginBottom: 12 }}>
+              <p style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 8 }}>QR code for this link</p>
+              <div ref={setProductLinkQrRef} style={{ background: "#fff", padding: 16, borderRadius: 12, display: "inline-block" }}>
+                <QRCode value={generatedProductLink.trackedUrl} size={160} level="M" />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!productLinkQrRef) return;
+                    const svg = productLinkQrRef.querySelector("svg");
+                    if (!svg) return;
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) return;
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const img = new Image();
+                    img.onload = () => {
+                      canvas.width = img.width;
+                      canvas.height = img.height;
+                      ctx.fillStyle = "#ffffff";
+                      ctx.fillRect(0, 0, canvas.width, canvas.height);
+                      ctx.drawImage(img, 0, 0);
+                      const a = document.createElement("a");
+                      a.download = "product-link-qr.png";
+                      a.href = canvas.toDataURL("image/png");
+                      a.click();
+                    };
+                    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+                  }}
+                  style={{ padding: "8px 16px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+                >
+                  Generate QR Code (download PNG)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {generatedLinksHistory.length > 0 && (
+          <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${THEME.border}` }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: THEME.text }}>Recently Generated Links</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {generatedLinksHistory.map((link) => (
+                <div key={link.id} style={{ background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: 14 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 4 }} title={link.originalUrl}>
+                        {link.originalUrl.length > 50 ? link.originalUrl.slice(0, 50) + "…" : link.originalUrl}
+                      </p>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <code style={{ flex: 1, minWidth: 120, padding: "6px 10px", background: "#fff", borderRadius: 6, fontSize: 12, wordBreak: "break-all" }}>{link.trackedUrl}</code>
+                        <button type="button" onClick={() => copyToClipboard(link.trackedUrl, () => {})} style={{ padding: "6px 12px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Copy</button>
+                      </div>
+                      <p style={{ fontSize: 11, color: THEME.textMuted, marginTop: 6, marginBottom: 0 }}>{new Date(link.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</p>
+                    </div>
+                    <button type="button" onClick={async () => { await fetch("/api/affiliate/generated-links/" + link.id, { method: "DELETE" }); fetchGeneratedLinks(); if (generatedProductLink?.trackedUrl === link.trackedUrl) setGeneratedProductLink(null); }} style={{ padding: "6px 12px", background: "#fee2e2", color: "#b91c1c", border: "1px solid #b91c1c", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Get Shareable Assets */}
       <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24 }}>
