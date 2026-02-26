@@ -11,14 +11,15 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
   return expected === signature;
 }
 
-function getAffiliateIdFromMetaData(metaData: unknown): string | null {
+function getAffiliateRefFromMetaData(metaData: unknown): string | null {
   if (!Array.isArray(metaData)) return null;
+  const keys = ['_bll_affiliate_ref', '_ref', 'affiliate_id'];
   for (const item of metaData) {
     const entry = item as { key?: string; value?: string };
     const key = (entry.key ?? '').toLowerCase();
-    if (key === '_ref' || key === 'affiliate_id') {
+    if (keys.some((k) => key === k)) {
       const v = entry.value;
-      return typeof v === 'string' ? v : v != null ? String(v) : null;
+      return typeof v === 'string' ? v.trim() : v != null ? String(v).trim() : null;
     }
   }
   return null;
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     const orderId = order.id != null ? String(order.id) : null;
     const status = (order.status ?? '').toLowerCase();
     const total = Number(order.total ?? 0) || 0;
-    const affiliateId = getAffiliateIdFromMetaData(order.meta_data ?? []);
+    const affiliateRef = getAffiliateRefFromMetaData(order.meta_data ?? []);
 
     if (!orderId) {
       return NextResponse.json({ ok: true, message: 'No order id' });
@@ -63,13 +64,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, message: 'Status ignored' });
     }
 
-    if (!affiliateId) {
+    if (!affiliateRef) {
       return NextResponse.json({ ok: true, message: 'No affiliate ref' });
     }
 
-    const affiliate = await prisma.affiliate.findUnique({
-      where: { id: affiliateId },
-    });
+    const affiliate =
+      (await prisma.affiliate.findUnique({ where: { id: affiliateRef } })) ??
+      (await prisma.affiliate.findUnique({ where: { slug: affiliateRef } }));
     if (!affiliate) {
       return NextResponse.json({ ok: true, message: 'Affiliate not found' });
     }
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.conversion.create({
       data: {
-        affiliateId,
+        affiliateId: affiliate.id,
         amount: total,
         orderId,
         source: 'woocommerce',

@@ -50,6 +50,11 @@ export default function SettingsPage() {
   const [emailMarketingTestResult, setEmailMarketingTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [emailMarketingSyncing, setEmailMarketingSyncing] = useState(false);
   const [emailMarketingSyncResult, setEmailMarketingSyncResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [settingsTab, setSettingsTab] = useState<"main" | "tracking">("main");
+  const [trackingTestSlug, setTrackingTestSlug] = useState("");
+  const [trackingTestResult, setTrackingTestResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [webhookConfigured, setWebhookConfigured] = useState<boolean | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     setTiers(initial.tiers.length ? initial.tiers : [...DEFAULT_TIERS]);
@@ -136,6 +141,21 @@ export default function SettingsPage() {
     }
   };
 
+  useEffect(() => {
+    if (settingsTab !== "tracking") return;
+    fetch("/api/settings/webhook-status")
+      .then((r) => r.json())
+      .then((d) => setWebhookConfigured(d.configured ?? false))
+      .catch(() => setWebhookConfigured(false));
+  }, [settingsTab]);
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyFeedback(label);
+      setTimeout(() => setCopyFeedback(null), 2000);
+    });
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", padding: 32, color: THEME.textMuted }}>
@@ -144,13 +164,45 @@ export default function SettingsPage() {
     );
   }
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://affiliate-tracker-psi.vercel.app";
+  const webhookUrl = origin + "/api/webhooks/woocommerce";
+  const snippetUrl = origin + "/tracking-snippet.js";
+
+  const phpSnippet = `// Enqueue BLL tracking snippet on all pages
+add_action('wp_enqueue_scripts', function () {
+  wp_enqueue_script(
+    'bll-tracking',
+    '${snippetUrl}',
+    [],
+    null,
+    true
+  );
+});
+
+// Add hidden checkout field (value set by JS from cookie)
+add_action('woocommerce_checkout_after_customer_details', function () {
+  echo '<input type="hidden" name="_bll_affiliate_ref" id="_bll_affiliate_ref" value="">';
+});
+
+// Save affiliate ref to order meta so webhook can attribute the order
+add_action('woocommerce_checkout_update_order_meta', function ($order_id) {
+  if (!empty($_POST['_bll_affiliate_ref'])) {
+    update_post_meta($order_id, '_bll_affiliate_ref', sanitize_text_field($_POST['_bll_affiliate_ref']));
+  }
+});`;
+
   return (
     <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: THEME.text, padding: "32px 40px", maxWidth: 900 }}>
       <style>{`* { box-sizing: border-box; } input, select { font-family: inherit; }`}</style>
       <Link href="/" style={{ display: "inline-block", marginBottom: 24, color: THEME.textMuted, fontSize: 13, textDecoration: "none" }}>← Back to Dashboard</Link>
       <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={200} height={51} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 16 }} />
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Settings</h1>
-      <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 32 }}>Configure your affiliate program. Changes apply app-wide and re-evaluate all affiliates when you save.</p>
+      <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 24 }}>Configure your affiliate program. Changes apply app-wide and re-evaluate all affiliates when you save.</p>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 32, borderBottom: `1px solid ${THEME.border}`, paddingBottom: 8 }}>
+        <button type="button" onClick={() => setSettingsTab("main")} style={{ padding: "8px 16px", background: settingsTab === "main" ? THEME.accent : "transparent", color: settingsTab === "main" ? "#fff" : THEME.textMuted, border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Program &amp; integrations</button>
+        <button type="button" onClick={() => setSettingsTab("tracking")} style={{ padding: "8px 16px", background: settingsTab === "tracking" ? THEME.accent : "transparent", color: settingsTab === "tracking" ? "#fff" : THEME.textMuted, border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600 }}>Tracking Setup</button>
+      </div>
 
       {message && (
         <div style={{
@@ -165,6 +217,8 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {settingsTab === "main" && (
+        <>
       {/* Tier Settings */}
       <section style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Tier Settings</h2>
@@ -538,6 +592,74 @@ export default function SettingsPage() {
       </section>
 
       <button type="button" onClick={save} disabled={saving} style={{ padding: "12px 32px", background: saving ? "#cbd5e1" : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Saving…" : "Save settings"}</button>
+        </>
+      )}
+
+      {settingsTab === "tracking" && (
+        <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>WooCommerce tracking</h2>
+          <p style={{ color: THEME.textMuted, fontSize: 13, marginBottom: 20 }}>Give this page to your developer so they can install affiliate tracking on the BLL WooCommerce store. The snippet captures <code style={{ background: THEME.bg, padding: "2px 6px", borderRadius: 4 }}>?ref=</code> or <code style={{ background: THEME.bg, padding: "2px 6px", borderRadius: 4 }}>?affiliate=</code>, saves it in a cookie and localStorage, and adds it to checkout as <code style={{ background: THEME.bg, padding: "2px 6px", borderRadius: 4 }}>_bll_affiliate_ref</code> so the webhook can attribute orders.</p>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Step 1: Webhook URL</h3>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>Use this URL when creating the webhook in WooCommerce.</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
+            <code style={{ flex: 1, minWidth: 200, padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 12, wordBreak: "break-all" }}>{webhookUrl}</code>
+            <button type="button" onClick={() => copyToClipboard(webhookUrl, "URL")} style={{ padding: "10px 16px", background: copyFeedback === "URL" ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>{copyFeedback === "URL" ? "Copied" : "Copy"}</button>
+          </div>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Step 2: Webhook secret</h3>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>Set the same secret in WooCommerce (Webhook → Secret) and in Vercel as <code>WOOCOMMERCE_WEBHOOK_SECRET</code>.</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
+            <code style={{ padding: "10px 12px", background: THEME.bg, borderRadius: 8, fontSize: 12 }}>{webhookConfigured === true ? "••••••••••••" : "Not set in env"}</code>
+            <button type="button" onClick={() => copyToClipboard("Set WOOCOMMERCE_WEBHOOK_SECRET in Vercel env and the same value in WooCommerce → Webhooks → [your webhook] → Secret.", "Secret")} style={{ padding: "10px 16px", background: copyFeedback === "Secret" ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>{copyFeedback === "Secret" ? "Copied" : "Copy instructions"}</button>
+          </div>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Step 3: Add webhook in WooCommerce</h3>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>WooCommerce → Settings → Advanced → Webhooks → Add webhook. Topic: <strong>Order updated</strong>. Delivery URL: paste the URL above. Secret: same as in Vercel.</p>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10 }}>Step 4: Install tracking on the store</h3>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 12 }}>Choose one method below.</p>
+
+          <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Option A — WordPress plugin (easier)</h4>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>Add this to your theme&apos;s <code>functions.php</code> or use a plugin like Code Snippets:</p>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <pre style={{ margin: 0, padding: 16, background: "#1e293b", color: "#e2e8f0", borderRadius: 8, fontSize: 12, overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{phpSnippet}</pre>
+            <button type="button" onClick={() => copyToClipboard(phpSnippet, "PHP")} style={{ position: "absolute", top: 8, right: 8, padding: "8px 12px", background: copyFeedback === "PHP" ? THEME.success : THEME.accentLight, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{copyFeedback === "PHP" ? "Copied" : "Copy"}</button>
+          </div>
+
+          <h4 style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>Option B — Manual JS</h4>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 8 }}>Load the snippet in your theme&apos;s header or via Google Tag Manager. Script URL:</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
+            <code style={{ flex: 1, minWidth: 180, padding: "8px 10px", background: THEME.bg, borderRadius: 6, fontSize: 11, wordBreak: "break-all" }}>{snippetUrl}</code>
+            <button type="button" onClick={() => copyToClipboard(snippetUrl, "JS URL")} style={{ padding: "8px 12px", background: copyFeedback === "JS URL" ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{copyFeedback === "JS URL" ? "Copied" : "Copy"}</button>
+          </div>
+          <p style={{ color: THEME.textMuted, fontSize: 12 }}>Or add a script tag: <code style={{ background: THEME.bg, padding: "2px 6px", borderRadius: 4 }}>{`<script src="${snippetUrl}"><\/script>`}</code></p>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 28, marginBottom: 10 }}>Test tracking</h3>
+          <p style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 12 }}>Enter an affiliate slug (or id) to confirm they exist and would be attributed by the webhook.</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+            <input type="text" value={trackingTestSlug} onChange={(e) => setTrackingTestSlug(e.target.value)} placeholder="e.g. sarabeth" style={{ width: 200, padding: "8px 12px", border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 13 }} />
+            <button
+              type="button"
+              onClick={async () => {
+                setTrackingTestResult(null);
+                if (!trackingTestSlug.trim()) return;
+                const res = await fetch("/api/settings/tracking-test?slug=" + encodeURIComponent(trackingTestSlug.trim()));
+                const data = await res.json().catch(() => ({}));
+                setTrackingTestResult({ ok: !!data.ok, text: data.ok ? (data.message || "Affiliate found.") : (data.error || "Not found") });
+              }}
+              style={{ padding: "8px 16px", background: THEME.accentLight, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}
+            >
+              Verify
+            </button>
+          </div>
+          {trackingTestResult && (
+            <div style={{ padding: 12, borderRadius: 8, background: trackingTestResult.ok ? "#dcfce7" : "#fee2e2", color: trackingTestResult.ok ? THEME.success : THEME.error, fontSize: 13 }}>
+              {trackingTestResult.text}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
