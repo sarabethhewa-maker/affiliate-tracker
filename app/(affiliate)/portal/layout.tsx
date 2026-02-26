@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import OnboardingChecklist from "./OnboardingChecklist";
 
@@ -83,9 +82,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           >
             Admin dashboard
           </Link>
-          <Link href="/portal/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, color: THEME.text, textDecoration: "none" }}>
-            <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={160} height={41} style={{ width: "auto", height: 36, objectFit: "contain" }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: THEME.textMuted }}>Affiliate Portal</span>
+          <Link href="/portal/dashboard" style={{ display: "flex", alignItems: "center", color: THEME.text, textDecoration: "none" }}>
+            <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 36, width: "auto", objectFit: "contain" }} />
           </Link>
           <nav style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {navItems.map(({ href, label }) => (

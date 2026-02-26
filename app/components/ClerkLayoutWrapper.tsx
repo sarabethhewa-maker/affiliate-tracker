@@ -17,6 +17,9 @@ export default function ClerkLayoutWrapper({ children }: { children: React.React
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
           alignItems: 'center', height: '100vh', background: '#060a0e', gap: 16
         }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 60, width: 'auto', objectFit: 'contain' }} />
+          </div>
           <div style={{ color: '#e8f0f8', fontSize: 24, fontWeight: 800 }}>
             Affiliate Dashboard
           </div>

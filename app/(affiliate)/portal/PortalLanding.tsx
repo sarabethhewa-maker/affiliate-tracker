@@ -53,6 +53,10 @@ export default function PortalLanding({ prefilledEmail = "", autoOpenModal = fal
           }}
         >
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 60, width: "auto", objectFit: "contain" }} className="portal-hero-logo" />
+            </div>
+            <style>{`@media (max-width: 768px) { .portal-hero-logo { height: 45px !important; } }`}</style>
             <h1
               style={{
                 fontSize: "clamp(28px, 4vw, 38px)",

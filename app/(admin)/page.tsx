@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import Tooltip from "../components/Tooltip";
 import ImportAffiliatesTab from "./ImportAffiliatesTab";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
@@ -821,8 +820,9 @@ export default function Page() {
       <div className={sidebarOpen ? "admin-sidebar open" : "admin-sidebar"} style={{ width: 220, background: THEME.sidebar, borderRight: `1px solid ${THEME.border}`, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
         <div style={{ padding: "28px 20px 20px" }}>
           <div style={{ marginBottom: 32 }}>
-            <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={180} height={46} style={{ width: "auto", height: 40, objectFit: "contain", marginBottom: 8 }} />
-            <div style={{ color: THEME.textMuted, fontSize: 10, letterSpacing: 1 }}>AFFILIATEOS · TRACKING</div>
+            <Link href="/" style={{ display: "block" }}>
+              <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 40, width: "auto", objectFit: "contain", display: "block" }} />
+            </Link>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4 }} data-tour="nav">
             {NAV.map(n => {
@@ -876,7 +876,7 @@ export default function Page() {
           )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32, flexWrap: "wrap", gap: 16, paddingTop: isMobile ? 48 : 0 }}>
             <div>
-              <Image src="/biolongevity-logo.png" alt="Biolongevity Labs" width={200} height={51} style={{ width: "auto", height: 36, objectFit: "contain", marginBottom: 10 }} />
+              <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 36, width: "auto", objectFit: "contain", marginBottom: 10 }} />
               <h1 style={{ fontSize: 26, fontWeight: 800, color: THEME.text, marginBottom: 4 }}>
                 {tab === "how-to-use" && "How to Use"}
                 {tab === "dashboard" && "Dashboard"}
