@@ -90,3 +90,14 @@ model Alert {
   dismissed   Boolean   @default(false)
   createdAt   DateTime  @default(now())
 }
+
+model ImportLog {
+  id             String   @id @default(cuid())
+  method         String   // csv | paste | tapaffiliate | goaffpro | tune
+  totalCount     Int
+  importedCount  Int
+  skippedCount   Int
+  errorCount     Int
+  details        Json?    // optional details (e.g. errors)
+  createdAt      DateTime @default(now())
+}

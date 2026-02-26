@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Tooltip from "../components/Tooltip";
+import ImportAffiliatesTab from "./ImportAffiliatesTab";
 import { useSettings, resolveTierKey } from "../contexts/SettingsContext";
 
 function getCurrentMonthRevenue(conversions: { amount: number; createdAt: string }[]): number {
@@ -602,6 +603,7 @@ export default function Page() {
     { id: "dashboard", label: "Dashboard", icon: "▦", tooltip: "Your overview. See total revenue, clicks, conversions and top performers at a glance." },
     { id: "conversions", label: "Conversion Status", icon: "◉", tooltip: "A conversion is recorded when a customer makes a purchase through the affiliate's link. Approve and mark paid here." },
     { id: "affiliates", label: "Affiliates", icon: "◈", tooltip: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats." },
+    { id: "import", label: "Import Affiliates", icon: "⬇", tooltip: "Import affiliates from CSV, paste, TapAffiliate, GoAffPro, or Tune." },
     { id: "mlm", label: "MLM Tree", icon: "⋔", tooltip: "Shows the full network of who recruited who. Each level earns a smaller override commission." },
     { id: "payouts", label: "Payouts", icon: "◎", tooltip: "Track what each affiliate has earned and log when you've paid them." },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆", tooltip: "Top affiliates by sales this month. Gold, silver, bronze for top 3." },
@@ -880,6 +882,7 @@ export default function Page() {
                 {tab === "dashboard" && "Dashboard"}
                 {tab === "conversions" && "Conversion Status"}
                 {tab === "affiliates" && "Affiliates"}
+                {tab === "import" && "Import Affiliates"}
                 {tab === "mlm" && "MLM Network Tree"}
                 {tab === "leaderboard" && "Leaderboard"}
                 {tab === "payouts" && "Payout Overview"}
@@ -1258,6 +1261,8 @@ export default function Page() {
               </div>
             </>
           )}
+
+          {!loading && tab === "import" && <ImportAffiliatesTab onImport={fetchAffiliates} />}
 
           {!loading && tab === "mlm" && (
             <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 28 }} data-tour="mlm-content">
