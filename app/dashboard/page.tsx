@@ -84,6 +84,7 @@ type Affiliate = {
   archivedAt?: string | null;
   deletedAt?: string | null;
   createdAt: string;
+  fraudFlags?: { id: string; type: string; description: string; severity: string; resolved: boolean; resolvedNote: string | null; createdAt: string }[];
 };
 
 type ActivityLogEntry = { id: string; type: string; message: string; affiliateId: string | null; createdAt: string };
@@ -380,6 +381,12 @@ export default function Page() {
   const [announcements, setAnnouncements] = useState<{ id: string; title: string; content: string; priority: string; pinned: boolean; publishedAt: string; expiresAt: string | null; createdBy: string; createdAt: string; updatedAt: string }[]>([]);
   const [announcementModal, setAnnouncementModal] = useState<{ id: string | null; title: string; content: string; priority: string; pinned: boolean; expiresAt: string } | null>(null);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [fraudFlags, setFraudFlags] = useState<{ id: string; affiliateId: string; type: string; description: string; severity: string; resolved: boolean; createdAt: string; affiliate: { id: string; name: string; email: string } }[]>([]);
+  const [fraudAlertsExpanded, setFraudAlertsExpanded] = useState(false);
+  const [fraudResolveModal, setFraudResolveModal] = useState<{ id: string; affiliateName: string } | null>(null);
+  const [fraudResolveNote, setFraudResolveNote] = useState("");
+  const [fraudResolveSaving, setFraudResolveSaving] = useState(false);
+  const [fraudScanning, setFraudScanning] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -456,6 +463,20 @@ export default function Page() {
   useEffect(() => {
     if (tab === "announcements") fetchAnnouncements();
   }, [tab, fetchAnnouncements]);
+
+  const fetchFraudFlags = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/fraud-flags?resolved=false");
+      if (!res.ok) return;
+      const data = await res.json();
+      setFraudFlags(Array.isArray(data) ? data : []);
+    } catch {
+      setFraudFlags([]);
+    }
+  }, []);
+  useEffect(() => {
+    if (tab === "dashboard") fetchFraudFlags();
+  }, [tab, fetchFraudFlags]);
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -1030,6 +1051,48 @@ export default function Page() {
                   ))}
                 </div>
               )}
+              {/* Fraud Alerts */}
+              <div style={{ marginBottom: 20 }}>
+                <button type="button" onClick={() => setFraudAlertsExpanded(!fraudAlertsExpanded)} style={{ width: "100%", textAlign: "left", padding: 16, background: fraudFlags.length > 0 ? "#fef3c7" : "#f8fafc", border: `1px solid ${fraudFlags.length > 0 ? "#b45309" : THEME.border}`, borderRadius: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                  <span style={{ fontWeight: 700, color: fraudFlags.length > 0 ? "#92400e" : THEME.text, fontSize: 14 }}>
+                    🛡️ Fraud Alerts {fraudFlags.length > 0 ? `— ${fraudFlags.length} Unresolved` : ""}
+                  </span>
+                  {fraudFlags.length > 0 && <span style={{ background: "#b45309", color: "#fff", padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{fraudFlags.length}</span>}
+                  <span style={{ color: THEME.textMuted, fontSize: 12 }}>{fraudAlertsExpanded ? "▼" : "▶"}</span>
+                </button>
+                {fraudAlertsExpanded && (
+                  <div style={{ marginTop: 8, padding: 16, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                      <span style={{ color: THEME.textMuted, fontSize: 12 }}>Run checks across all affiliates</span>
+                      <button type="button" disabled={fraudScanning} onClick={async () => { setFraudScanning(true); try { await fetch("/api/admin/fraud-scan", { method: "POST" }); fetchFraudFlags(); fetchAffiliates(); } finally { setFraudScanning(false); } }} style={{ padding: "6px 14px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 8, fontSize: 12, cursor: fraudScanning ? "not-allowed" : "pointer", fontWeight: 600 }}>{fraudScanning ? "Scanning…" : "Run fraud scan"}</button>
+                    </div>
+                    {fraudFlags.length === 0 ? (
+                      <p style={{ color: THEME.textMuted, fontSize: 13, margin: 0 }}>No unresolved fraud flags.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {fraudFlags.map((f) => {
+                          const sevStyle = f.severity === "high" ? { background: "#fee2e2", color: "#b91c1c", border: "1px solid #b91c1c60" } : f.severity === "medium" ? { background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960" } : { background: "#f1f5f9", color: "#4a5568", border: "1px solid #e2e8f0" };
+                          return (
+                            <div key={f.id} style={{ padding: 12, background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8 }}>
+                              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: 13, color: THEME.text, marginBottom: 4 }}>{f.affiliate.name}</div>
+                                  <div style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 4 }}>{f.description}</div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, ...sevStyle }}>{f.type}</span>
+                                    <span style={{ fontSize: 11, color: THEME.textMuted }}>{new Date(f.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+                                  </div>
+                                </div>
+                                <button type="button" onClick={() => { setFraudResolveModal({ id: f.id, affiliateName: f.affiliate.name }); setFraudResolveNote(""); }} style={{ padding: "6px 12px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>Resolve</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" as const, alignItems: "center" }}>
                 <span style={{ color: THEME.textMuted, fontSize: 12, fontWeight: 600, marginRight: 8 }}>Period:</span>
                 {(["today", "week", "month", "year", "all"] as const).map((key) => (
@@ -1274,6 +1337,7 @@ export default function Page() {
                         <div style={{ flex: 1, minWidth: 200 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" as const }}>
                             <span style={{ color: THEME.text, fontWeight: 700, fontSize: 14 }}>{aff.name}</span>
+                            {(aff.fraudFlags?.filter((f: { resolved: boolean }) => !f.resolved).length ?? 0) > 0 && <span title="Unresolved fraud flags" style={{ fontSize: 14 }}>⚠️</span>}
                             {isArchived && <span style={{ background: "#fef3c7", color: "#b45309", border: "1px solid #b4530960", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>ARCHIVED</span>}
                             <TierBadge tier={vol.tierKey} TIERS={TIERS} />
                             {aff.status !== "active" && <StatusBadge status={aff.status} />}
@@ -1489,6 +1553,28 @@ export default function Page() {
                               <span style={{ background: "#fee2e2", color: THEME.error, border: "1px solid #b91c1c60", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>Blocked</span>
                             )}
                           </div>
+                          {(aff.fraudFlags?.length ?? 0) > 0 && (
+                            <div style={{ marginTop: 12, padding: 10, background: "#fef3c7", border: "1px solid #b4530960", borderRadius: 8, fontSize: 12 }}>
+                              <div style={{ fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Fraud flags</div>
+                              {(aff.fraudFlags ?? []).map((f: { id: string; type: string; description: string; severity: string; resolved: boolean; resolvedNote?: string | null; createdAt: string }) => {
+                                const sevStyle = f.severity === "high" ? { background: "#fee2e2", color: "#b91c1c" } : f.severity === "medium" ? { background: "#fef3c7", color: "#b45309" } : { background: "#f1f5f9", color: "#4a5568" };
+                                return (
+                                  <div key={f.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(180,83,9,0.2)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" as const, gap: 6 }}>
+                                      <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 6px", borderRadius: 4, ...sevStyle, marginRight: 8 }}>{f.type}</span>
+                                      <span>
+                                        {f.resolved ? <span style={{ fontSize: 11, color: THEME.success }}>Resolved</span> : (
+                                          <button type="button" onClick={() => { setFraudResolveModal({ id: f.id, affiliateName: aff.name }); setFraudResolveNote(""); }} style={{ padding: "4px 8px", background: "#1a4a8a", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Resolve</button>
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div style={{ color: THEME.text, marginTop: 2 }}>{f.description}</div>
+                                    <div style={{ fontSize: 11, color: THEME.textMuted }}>{new Date(f.createdAt).toLocaleDateString()}{f.resolvedNote ? ` · ${f.resolvedNote}` : ""}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                         <div style={{ display: "flex", gap: 20, textAlign: "center" as const }}>
                           {[["Clicks", aff.clicks.length, THEME.accentLight], ["Sales", aff.conversions.length, THEME.success], ["Revenue", `$${rev.toFixed(0)}`, THEME.warning]].map(([l, v, c]) => (
@@ -2054,6 +2140,34 @@ export default function Page() {
                   } finally { setAnnouncementSaving(false); }
                 }} style={{ flex: 1, padding: "10px 0", background: "#1a4a8a", border: "none", borderRadius: 8, color: "#fff", cursor: announcementSaving ? "not-allowed" : "pointer", fontWeight: 600 }}>{announcementSaving ? "Saving…" : "Publish"}</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fraud resolve modal */}
+      {fraudResolveModal && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, width: 400, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, margin: 0 }}>Mark as resolved</h2>
+              <button type="button" onClick={() => { setFraudResolveModal(null); setFraudResolveNote(""); }} style={{ background: "none", border: "none", color: THEME.textMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <p style={{ color: THEME.textMuted, fontSize: 13, marginBottom: 12 }}>Affiliate: {fraudResolveModal.affiliateName}</p>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Note (optional)</label>
+            <input type="text" value={fraudResolveNote} onChange={(e) => setFraudResolveNote(e.target.value)} placeholder="e.g. Reviewed, legitimate traffic from office IP" style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8, marginBottom: 16 }} />
+            <div style={{ display: "flex", gap: 12 }}>
+              <button type="button" onClick={() => { setFraudResolveModal(null); setFraudResolveNote(""); }} style={{ flex: 1, padding: "10px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+              <button type="button" disabled={fraudResolveSaving} onClick={async () => {
+                setFraudResolveSaving(true);
+                try {
+                  await fetch("/api/admin/fraud-flags/" + fraudResolveModal.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: fraudResolveNote }) });
+                  setFraudResolveModal(null);
+                  setFraudResolveNote("");
+                  fetchFraudFlags();
+                  fetchAffiliates();
+                } finally { setFraudResolveSaving(false); }
+              }} style={{ flex: 1, padding: "10px 0", background: "#1a4a8a", border: "none", borderRadius: 8, color: "#fff", cursor: fraudResolveSaving ? "not-allowed" : "pointer", fontWeight: 600 }}>{fraudResolveSaving ? "Saving…" : "Mark as Resolved"}</button>
             </div>
           </div>
         </div>

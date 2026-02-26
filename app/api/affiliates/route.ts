@@ -16,7 +16,7 @@ export async function GET(req: Request) {
         deletedAt: null,
         ...(showArchived ? {} : { archivedAt: null }),
       },
-      include: { clicks: true, conversions: true, children: true, payouts: true },
+      include: { clicks: true, conversions: true, children: true, payouts: true, fraudFlags: true },
       orderBy: { createdAt: 'desc' },
     });
 

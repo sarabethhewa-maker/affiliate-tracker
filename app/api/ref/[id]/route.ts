@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkClickAnomaly } from '@/lib/alerts';
+import { checkFraudOnClick } from '@/lib/fraud';
 import { sendAlertEmail } from '@/lib/email';
 
 const COOKIE_DAYS = 30;
@@ -27,6 +28,7 @@ export async function GET(
           userAgent: req.headers.get('user-agent') ?? '',
         },
       });
+      checkFraudOnClick(aff.id, ip).catch(() => {});
       const alert = await checkClickAnomaly(aff.id, ip);
       if (alert) sendAlertEmail(aff.name ?? 'Unknown', alert.message).catch(() => {});
     } catch {

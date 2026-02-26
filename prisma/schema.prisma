@@ -41,6 +41,7 @@ model Affiliate {
   payouts          Payout[]
   slugHistory      SlugHistory[]
   generatedLinks   GeneratedLink[]
+  fraudFlags       FraudFlag[]
   createdAt        DateTime  @default(now())
 }
 
@@ -148,4 +149,18 @@ model GeneratedLink {
   trackedUrl  String
   createdAt   DateTime @default(now())
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+}
+
+model FraudFlag {
+  id           String    @id @default(cuid())
+  affiliateId  String
+  type         String    // duplicate-ip | self-referral | high-click-ratio | suspicious-pattern | rapid-clicks
+  description  String
+  severity     String    @default("medium") // low | medium | high
+  resolved     Boolean   @default(false)
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  resolvedNote String?
+  createdAt    DateTime  @default(now())
+  affiliate    Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 }
