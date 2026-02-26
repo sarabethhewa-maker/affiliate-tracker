@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendAdminNewSignup } from '@/lib/email';
+import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
 const HOW_DID_YOU_HEAR = ['Social Media', 'Friend/Referral', 'Google', 'Existing Affiliate', 'Other'] as const;
 
@@ -47,11 +48,13 @@ export async function POST(req: NextRequest) {
   }
 
   const howValue = howDidYouHear && HOW_DID_YOU_HEAR.includes(howDidYouHear) ? howDidYouHear : null;
+  const slug = await generateUniqueSlug(prisma, slugFromName(String(name).trim()));
 
   const affiliate = await prisma.affiliate.create({
     data: {
       name: String(name).trim(),
       email: String(email).trim().toLowerCase(),
+      slug,
       status: 'pending',
       parentId,
       phone: phone ? String(phone).trim() : null,

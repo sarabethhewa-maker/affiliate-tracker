@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { sendAffiliateWelcome } from '@/lib/email';
 import { logActivity } from '@/lib/activity';
 import { getSettings } from '@/lib/settings';
+import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
 function generateReferralCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -35,15 +36,24 @@ export async function POST(
     if (!referralCode) return NextResponse.json({ error: 'Could not generate code' }, { status: 500 });
   }
 
-  const updated = await prisma.affiliate.update({
+  let updated = await prisma.affiliate.update({
     where: { id },
     data: { status: 'active', referralCode },
     include: { clicks: true, conversions: true, children: true, payouts: true },
   });
 
+  if (!updated.slug) {
+    const slug = await generateUniqueSlug(prisma, slugFromName(updated.name));
+    updated = await prisma.affiliate.update({
+      where: { id },
+      data: { slug },
+      include: { clicks: true, conversions: true, children: true, payouts: true },
+    });
+  }
+
   const settings = await getSettings();
   const origin = req.headers.get('origin') || req.nextUrl.origin;
-  const salesLink = `${origin}/api/ref/${updated.id}`;
+  const salesLink = updated.slug ? `${origin}/ref/${updated.slug}` : `${origin}/api/ref/${updated.id}`;
   const recruitLink = `${origin}/join?ref=${updated.referralCode}`;
   const portalUrl = `${origin}/portal`;
   const tierIndex = parseInt(updated.tier, 10) || 0;

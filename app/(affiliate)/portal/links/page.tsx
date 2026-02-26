@@ -19,7 +19,7 @@ const THEME = {
 
 type MeResponse = {
   pending?: boolean;
-  affiliate?: { id: string; name: string; referralCode: string | null };
+  affiliate?: { id: string; name: string; referralCode: string | null; slug: string | null; socialHandle?: string | null };
   tiers?: { name: string; commission: number }[];
   tierIndex?: number;
   commissionRate?: number;
@@ -41,6 +41,10 @@ export default function PortalLinksPage() {
   const [copiedRecruit, setCopiedRecruit] = useState(false);
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [assetDownloading, setAssetDownloading] = useState(false);
+  const [slugEditValue, setSlugEditValue] = useState("");
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [slugSaving, setSlugSaving] = useState(false);
+  const [slugSuccess, setSlugSuccess] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
   const shareCardRef = useRef<HTMLDivElement>(null);
 
@@ -60,8 +64,31 @@ export default function PortalLinksPage() {
     setOnboardingVisitedLinks();
   }, []);
 
+  useEffect(() => {
+    if (!slugEditValue.trim() || slugEditValue.length < 3) {
+      setSlugAvailable(null);
+      return;
+    }
+    const raw = slugEditValue.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+    if (raw.length < 3) {
+      setSlugAvailable(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      fetch(`/api/me/affiliate/slug/available?slug=${encodeURIComponent(raw)}`)
+        .then((r) => r.json())
+        .then((d) => setSlugAvailable(d.valid && d.available))
+        .catch(() => setSlugAvailable(null));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [slugEditValue]);
+
+  const trackingLinkFromAff = (aff: { id: string; slug?: string | null }) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return aff.slug ? `${origin}/ref/${aff.slug}` : `${origin}/api/ref/${aff.id}`;
+  };
   const downloadQR = useCallback(() => {
-    const trackingLink = typeof window !== "undefined" ? `${window.location.origin}/api/ref/${data?.affiliate?.id}` : "";
+    const trackingLink = data?.affiliate ? trackingLinkFromAff(data.affiliate) : "";
     if (!trackingLink || !qrRef.current) return;
     const svg = qrRef.current.querySelector("svg");
     if (!svg) return;
@@ -82,7 +109,7 @@ export default function PortalLinksPage() {
       a.click();
     };
     img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-  }, [data?.affiliate?.id]);
+  }, [data?.affiliate]);
 
   const downloadShareCard = useCallback(async () => {
     if (!shareCardRef.current) return;
@@ -107,8 +134,12 @@ export default function PortalLinksPage() {
 
   const aff = data.affiliate;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const trackingLink = `${origin}/api/ref/${aff.id}`;
+  const trackingLink = trackingLinkFromAff(aff);
   const recruitLink = aff.referralCode ? `${origin}/join?ref=${aff.referralCode}` : null;
+  const first = aff.name.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "me";
+  const full = aff.name.trim().split(/\s+/).map((p) => (p as string).toLowerCase().replace(/[^a-z0-9]/g, "")).filter(Boolean).join("-") || "me";
+  const handle = aff.socialHandle ? aff.socialHandle.replace(/^@/, "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30) : "";
+  const slugSuggestions = [first, full, ...(handle.length >= 3 ? [handle] : [])].filter((s, i, arr) => s.length >= 3 && arr.indexOf(s) === i);
   const tierName = data.tiers?.[data.tierIndex ?? 0]?.name ?? "Affiliate";
   const commissionPct = data.commissionRate ?? 10;
   const shareCaption = `I partner with @biolongevitylabs and earn commission on every sale 💊 Use my link to shop and join my team: ${trackingLink} #peptides #biohacking`;
@@ -125,6 +156,61 @@ export default function PortalLinksPage() {
           <button type="button" onClick={() => { copyToClipboard(trackingLink, setCopiedTrack); setOnboardingCopiedLink(); }} style={{ padding: "10px 16px", background: copiedTrack ? THEME.success : THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
             {copiedTrack ? "Copied" : "Copy"}
           </button>
+        </div>
+        <div style={{ marginTop: 24, paddingTop: 24, borderTop: `1px solid ${THEME.border}` }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: THEME.text }}>Customize your link</h3>
+          <p style={{ fontSize: 13, color: THEME.textMuted, marginBottom: 12 }}>Change the last part of your link (e.g. /ref/<strong style={{ color: THEME.text }}>yourname</strong>). Only lowercase letters, numbers, and hyphens; 3–30 characters.</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+            <span style={{ color: THEME.textMuted, fontSize: 13 }}>{origin}/ref/</span>
+            <input
+              value={slugEditValue || (aff.slug ?? "")}
+              onChange={(e) => setSlugEditValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30))}
+              placeholder="yourname"
+              style={{ width: 140, padding: "8px 10px", fontSize: 13, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 8, background: THEME.bg }}
+            />
+            {(slugEditValue || aff.slug) && (slugEditValue || aff.slug)!.length >= 3 && (slugAvailable === true || (slugEditValue || aff.slug) === (aff.slug ?? "")) && <span style={{ color: THEME.success }} title="Available">✓</span>}
+            {(slugEditValue || aff.slug) && (slugEditValue || aff.slug)!.length >= 3 && slugAvailable === false && <span style={{ color: "#b91c1c" }} title="Taken">✗</span>}
+            <button
+              type="button"
+              disabled={slugSaving || (() => {
+                const raw = (slugEditValue || (aff.slug ?? "")).trim();
+                if (raw.length < 3) return true;
+                if (raw === (aff.slug ?? "")) return false;
+                return slugAvailable !== true;
+              })()}
+              onClick={async () => {
+                const raw = (slugEditValue || (aff.slug ?? "")).trim().toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+                if (raw.length < 3) return;
+                setSlugSaving(true);
+                setSlugSuccess(false);
+                try {
+                  const res = await fetch("/api/me/affiliate/slug", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: raw }) });
+                  if (res.ok) {
+                    setSlugSuccess(true);
+                    setTimeout(() => setSlugSuccess(false), 5000);
+                    fetchMe();
+                  }
+                } finally {
+                  setSlugSaving(false);
+                }
+              }}
+              style={{ padding: "8px 16px", background: THEME.accent, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+            >
+              {slugSaving ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {slugSuggestions.length > 0 && (
+            <p style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 6 }}>Suggestions:</p>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            {slugSuggestions.map((s) => (
+              <button key={s} type="button" onClick={() => setSlugEditValue(s)} style={{ padding: "4px 10px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer", color: THEME.accent }}>{s}</button>
+            ))}
+          </div>
+          {slugSuccess && (
+            <p style={{ fontSize: 13, color: THEME.success, marginBottom: 8 }}>Your link has been updated! Make sure to update any places you&apos;ve already shared your old link.</p>
+          )}
+          <p style={{ fontSize: 12, color: THEME.textMuted }}>Changing your link will break any existing shares. Your old link will stop working.</p>
         </div>
         <div style={{ marginTop: 24 }}>
           <p style={{ fontSize: 14, color: THEME.textMuted, marginBottom: 12 }}>QR code — scan or download for events and print materials.</p>

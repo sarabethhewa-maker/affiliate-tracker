@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendAffiliateWelcome } from '@/lib/email';
+import { isValidSlug, sanitizeSlug } from '@/lib/slug';
 
 function generateReferralCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -34,7 +35,7 @@ export async function PATCH(
       }
       if (!referralCode) return NextResponse.json({ error: 'Could not generate code' }, { status: 500 });
     }
-    const updated = await prisma.affiliate.update({
+    let updated = await prisma.affiliate.update({
       where: { id },
       data: {
         status: 'active',
@@ -44,7 +45,7 @@ export async function PATCH(
       include: { clicks: true, conversions: true, children: true },
     });
     const origin = req.headers.get('origin') || req.nextUrl.origin;
-    const salesLink = `${origin}/api/ref/${updated.id}`;
+    const salesLink = updated.slug ? `${origin}/ref/${updated.slug}` : `${origin}/api/ref/${updated.id}`;
     const recruitLink = `${origin}/join?ref=${updated.referralCode}`;
     try {
       await sendAffiliateWelcome(updated.name, updated.email, salesLink, recruitLink);
@@ -59,6 +60,29 @@ export async function PATCH(
       where: { id },
       data: { status: 'rejected' },
       include: { clicks: true, conversions: true, children: true },
+    });
+    return NextResponse.json(updated);
+  }
+
+  // slug update (admin)
+  if (body.slug !== undefined) {
+    const slug = sanitizeSlug(String(body.slug));
+    if (!isValidSlug(slug)) {
+      return NextResponse.json(
+        { error: 'Slug must be 3–30 characters, lowercase letters, numbers, and hyphens only' },
+        { status: 400 }
+      );
+    }
+    const taken = await prisma.affiliate.findFirst({
+      where: { slug, NOT: { id } },
+    });
+    if (taken) {
+      return NextResponse.json({ error: 'This link name is already taken' }, { status: 409 });
+    }
+    const updated = await prisma.affiliate.update({
+      where: { id },
+      data: { slug },
+      include: { clicks: true, conversions: true, children: true, payouts: true },
     });
     return NextResponse.json(updated);
   }

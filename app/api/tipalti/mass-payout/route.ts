@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getSettings, getTierIndexForRevenue } from '@/lib/settings';
+import { getSettings, getTierIndexForRevenue, type TierRow } from '@/lib/settings';
 import { submitPayment } from '@/lib/tipalti';
 
 type PaymentItem = { affiliateId: string; amount: number };
@@ -9,7 +9,7 @@ type PaymentItem = { affiliateId: string; amount: number };
 function getApprovedAmount(
   aff: { id: string; conversions: { amount: number; status: string; createdAt: Date }[]; tier: string },
   allAffiliates: { id: string; parentId: string | null; conversions: { amount: number; status: string }[]; tier: string }[],
-  settings: { tiers: { commission: number; mlm2: number }[] }
+  settings: { tiers: TierRow[] }
 ): number {
   const now = new Date();
   const year = now.getFullYear();

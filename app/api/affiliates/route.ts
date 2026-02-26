@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
 export async function GET() {
   try {
@@ -27,10 +28,12 @@ export async function POST(req: Request) {
   if (err) return err;
 
   const body = await req.json();
+  const slug = await generateUniqueSlug(prisma, slugFromName(body.name ?? body.email ?? 'affiliate'));
   const affiliate = await prisma.affiliate.create({
     data: {
       name: body.name,
       email: body.email,
+      slug,
       tier: body.tier ?? 'silver',
       parentId: body.parentId ?? null,
       state: body.state ?? null,

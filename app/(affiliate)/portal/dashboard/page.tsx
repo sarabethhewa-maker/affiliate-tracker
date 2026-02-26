@@ -27,6 +27,7 @@ type MeResponse = {
     id: string;
     name: string;
     email: string;
+    slug?: string | null;
     tier: string;
     status: string;
     referralCode: string | null;
@@ -156,7 +157,7 @@ export default function PortalDashboardPage() {
   const nextTier = tiers[tierIndex + 1];
   const nextTierThreshold = data.nextTierThreshold ?? nextTier?.threshold ?? null;
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const trackingLink = `${origin}/api/ref/${aff.id}`;
+  const trackingLink = aff.slug ? `${origin}/ref/${aff.slug}` : `${origin}/api/ref/${aff.id}`;
   const recruitLink = aff.referralCode ? `${origin}/join?ref=${aff.referralCode}` : null;
   const needsTipalti =
     aff.tipaltiStatus !== "active" && aff.tipaltiStatus !== "pending";

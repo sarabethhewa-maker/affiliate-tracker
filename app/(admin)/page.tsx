@@ -49,6 +49,7 @@ type Affiliate = {
   id: string;
   name: string;
   email: string;
+  slug?: string | null;
   tier: string;
   status: string;
   state?: string | null;
@@ -315,6 +316,28 @@ export default function Page() {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [highlightedAffiliateId, setHighlightedAffiliateId] = useState<string | null>(null);
   const [savingNotesId, setSavingNotesId] = useState<string | null>(null);
+  const [editingSlugId, setEditingSlugId] = useState<string | null>(null);
+  const [slugEditValue, setSlugEditValue] = useState("");
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+  const [slugSaving, setSlugSaving] = useState(false);
+  useEffect(() => {
+    if (!editingSlugId || !slugEditValue.trim()) {
+      setSlugAvailable(null);
+      return;
+    }
+    const raw = slugEditValue.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+    if (raw.length < 3) {
+      setSlugAvailable(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      fetch(`/api/affiliates/slug/available?slug=${encodeURIComponent(raw)}&excludeId=${encodeURIComponent(editingSlugId)}`)
+        .then((r) => r.json())
+        .then((d) => setSlugAvailable(d.valid && d.available))
+        .catch(() => setSlugAvailable(null));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [editingSlugId, slugEditValue]);
   const [isMobile, setIsMobile] = useState(false);
   const [alerts, setAlerts] = useState<{ id: string; affiliateId: string; type: string; message: string; createdAt: string }[]>([]);
   const [leaderboardMode, setLeaderboardMode] = useState<"month" | "all" | "recruits">("month");
@@ -545,8 +568,9 @@ export default function Page() {
     if (seen !== "true") setTourStep(0);
   }, []);
 
-  const copyLink = (id: string) => {
-    const link = `${typeof window !== "undefined" ? window.location.origin : ""}/api/ref/${id}`;
+  const copyLink = (id: string, slug?: string | null) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const link = slug ? `${origin}/ref/${slug}` : `${origin}/api/ref/${id}`;
     navigator.clipboard?.writeText(link).catch(() => {});
     setCopied(id);
     setTimeout(() => setCopied(""), 2000);
@@ -1140,8 +1164,10 @@ export default function Page() {
                   const rev = aff.conversions.reduce((s, c) => s + c.amount, 0);
                   const monthlyRev = getCurrentMonthRevenue(aff.conversions);
                   const vol = getVolumeTier(monthlyRev);
-                  const salesLink = `${typeof window !== "undefined" ? window.location.origin : ""}/api/ref/${aff.id}`;
-                  const recruitLink = aff.referralCode ? `${typeof window !== "undefined" ? window.location.origin : ""}/join?ref=${aff.referralCode}` : null;
+                  const origin = typeof window !== "undefined" ? window.location.origin : "";
+                  const salesLink = aff.slug ? `${origin}/ref/${aff.slug}` : `${origin}/api/ref/${aff.id}`;
+                  const legacyLink = `${origin}/api/ref/${aff.id}`;
+                  const recruitLink = aff.referralCode ? `${origin}/join?ref=${aff.referralCode}` : null;
                   const parent = aff.parentId ? affiliates.find(a => a.id === aff.parentId) : null;
                   const parentVol = parent ? getVolumeTier(getCurrentMonthRevenue(parent.conversions)) : null;
                   const referrerPct = parentVol ? (TIERS[parentVol.tierKey]?.mlm2 ?? 3) : 0;
@@ -1158,7 +1184,35 @@ export default function Page() {
                             {aff.status !== "active" && <StatusBadge status={aff.status} />}
                             {aff.state && <span style={{ color: THEME.textMuted, fontSize: 11 }}>{aff.state}</span>}
                           </div>
-                          <div style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace", marginBottom: 2 }}>Sales: {salesLink}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 2 }}>
+                            <span style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace" }}>Sales: {salesLink}</span>
+                            {editingSlugId !== aff.id ? (
+                              <button type="button" onClick={() => { setEditingSlugId(aff.id); setSlugEditValue(aff.slug ?? ""); setSlugAvailable(null); }} title="Edit link slug" style={{ background: "none", border: "none", padding: 2, cursor: "pointer", color: THEME.textMuted, fontSize: 12 }}>✏️</button>
+                            ) : (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <input
+                                  value={slugEditValue}
+                                  onChange={(e) => setSlugEditValue(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 30))}
+                                  placeholder="slug"
+                                  style={{ width: 120, padding: "4px 8px", fontSize: 11, fontFamily: "monospace", border: `1px solid ${THEME.border}`, borderRadius: 4 }}
+                                />
+                                {slugEditValue.length >= 3 && slugAvailable === true && <span style={{ color: THEME.success }} title="Available">✓</span>}
+                                {slugEditValue.length >= 3 && slugAvailable === false && <span style={{ color: THEME.error }} title="Taken">✗</span>}
+                                <button type="button" disabled={slugSaving || slugEditValue.length < 3 || slugAvailable !== true} onClick={async () => {
+                                  if (slugEditValue.length < 3 || slugAvailable !== true) return;
+                                  setSlugSaving(true);
+                                  try {
+                                    await fetch("/api/affiliates/" + aff.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug: slugEditValue }) });
+                                    fetchAffiliates();
+                                    setEditingSlugId(null);
+                                    setSlugEditValue("");
+                                  } finally { setSlugSaving(false); }
+                                }} style={{ padding: "4px 10px", fontSize: 10, background: THEME.accent, color: "#fff", border: "none", borderRadius: 4, cursor: slugSaving ? "not-allowed" : "pointer" }}>{slugSaving ? "…" : "Save"}</button>
+                                <button type="button" onClick={() => { setEditingSlugId(null); setSlugEditValue(""); setSlugAvailable(null); }} style={{ padding: "4px 8px", fontSize: 10, background: "none", border: `1px solid ${THEME.border}`, borderRadius: 4, cursor: "pointer" }}>Cancel</button>
+                              </span>
+                            )}
+                          </div>
+                          {aff.slug && <div style={{ color: THEME.textMuted, fontSize: 10, marginBottom: 2 }}>Legacy: {legacyLink} — Old link still works</div>}
                           {recruitLink && <div style={{ color: THEME.accentLight, fontSize: 11, fontFamily: "monospace", marginBottom: 4 }}>Recruit: {recruitLink}</div>}
                           <VolumeProgressBar monthlyRevenue={monthlyRev} nextThreshold={vol.nextThreshold} progress={vol.progress} />
                           {parent && (
@@ -1243,7 +1297,7 @@ export default function Page() {
                           ))}
                         </div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                          <button onClick={() => copyLink(aff.id)} style={{ background: copied === aff.id ? THEME.successBg : "#dbeafe", border: `1px solid ${copied === aff.id ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copied === aff.id ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copied === aff.id ? "✓ Copied" : "Sales link"}</button>
+                          <button onClick={() => copyLink(aff.id, aff.slug)} style={{ background: copied === aff.id ? THEME.successBg : "#dbeafe", border: `1px solid ${copied === aff.id ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copied === aff.id ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copied === aff.id ? "✓ Copied" : "Sales link"}</button>
                           {recruitLink && <button onClick={() => copyRecruitLink(aff.referralCode!)} style={{ background: copiedRecruit === aff.referralCode ? THEME.successBg : "#dbeafe", border: `1px solid ${copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight}`, borderRadius: 6, padding: "6px 12px", color: copiedRecruit === aff.referralCode ? THEME.success : THEME.accentLight, cursor: "pointer", fontSize: 11 }}>{copiedRecruit === aff.referralCode ? "✓ Copied" : "Recruit link"}</button>}
                           <Link href={`/portal/dashboard?preview=${aff.id}`} target="_blank" rel="noopener noreferrer" style={{ padding: "6px 12px", background: "#ede9fe", border: "1px solid #6d28d9", borderRadius: 6, color: "#6d28d9", cursor: "pointer", fontSize: 11, textDecoration: "none" }}>View as Affiliate</Link>
                           {aff.status === "pending" && (

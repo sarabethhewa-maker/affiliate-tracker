@@ -63,21 +63,22 @@ export default function PortalGate() {
 
   // Signed in, no application → Stage 3: landing + prefill + auto-open modal
   if (me && "noApplication" in me && me.noApplication) {
-    return <PortalLanding prefilledEmail={me.email ?? ""} autoOpenModal />;
+    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} autoOpenModal />;
   }
 
   // Signed in, rejected → same as no application (can re-apply)
   if (me && "rejected" in me && me.rejected) {
-    return <PortalLanding prefilledEmail={me.email ?? ""} autoOpenModal />;
+    return <PortalLanding prefilledEmail={typeof me.email === "string" ? me.email : ""} autoOpenModal />;
   }
 
   // Signed in, pending → Stage 2: waiting screen only
   if (me && "pending" in me && me.pending && me.applicationDetails) {
+    const ad = me.applicationDetails as { name: string; email: string; createdAt: string };
     return (
       <PendingScreen
-        name={me.applicationDetails.name}
-        email={me.applicationDetails.email}
-        createdAt={me.applicationDetails.createdAt}
+        name={ad.name}
+        email={ad.email}
+        createdAt={ad.createdAt}
       />
     );
   }

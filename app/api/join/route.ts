@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendAdminNewSignup } from '@/lib/email';
+import { generateUniqueSlug, slugFromName } from '@/lib/slug';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -23,10 +24,12 @@ export async function POST(req: NextRequest) {
     if (referrer) parentId = referrer.id;
   }
 
+  const slug = await generateUniqueSlug(prisma, slugFromName((name as string).trim()));
   const affiliate = await prisma.affiliate.create({
     data: {
       name: (name as string).trim(),
       email: (email as string).trim().toLowerCase(),
+      slug,
       status: 'pending',
       parentId,
     },

@@ -128,7 +128,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   ];
 
   const mapCsvToRows = useCallback((): ImportRow[] => {
-    const fieldToKey: Record<string, keyof ImportRow> = {
+    const fieldToKey: Record<string, keyof ImportRow | "skip"> = {
       Name: "name",
       Email: "email",
       Tier: "tier",
@@ -285,10 +285,10 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
       const res = await fetch(url);
       const data = await res.json();
       const list = data?.response?.data?.data ?? [];
-      const rows: ImportRow[] = Object.values(list).map((a: { first_name?: string; last_name?: string; email?: string }) => ({
+      const rows: ImportRow[] = (Object.values(list) as { first_name?: string; last_name?: string; email?: string }[]).map((a) => ({
         name: [a.first_name, a.last_name].filter(Boolean).join(" ") || (a.email ?? ""),
         email: a.email ?? "",
-      })).filter((r: ImportRow) => r.email);
+      })).filter((r): r is ImportRow => !!r.email);
       setTuneAffiliates(rows);
       setTuneConnected(true);
     } catch {

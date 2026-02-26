@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
@@ -103,7 +103,7 @@ const styles = {
   error: { color: "#b91c1c", fontSize: 13, marginTop: 12, textAlign: "center" as const },
 };
 
-export default function JoinPage() {
+function JoinPageContent() {
   const searchParams = useSearchParams();
   const refFromUrl = searchParams.get("ref") ?? "";
   const [name, setName] = useState("");
@@ -257,5 +257,13 @@ export default function JoinPage() {
         {status === "error" && <p style={styles.error}>{message}</p>}
       </div>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<div style={styles.page}>Loading…</div>}>
+      <JoinPageContent />
+    </Suspense>
   );
 }

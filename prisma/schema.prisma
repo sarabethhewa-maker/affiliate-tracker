@@ -12,6 +12,7 @@ model Affiliate {
   id               String    @id @default(cuid())
   name             String
   email            String    @unique
+  slug             String?   @unique // pretty referral link e.g. /ref/sarabeth
   tier             String    @default("silver")
   status           String    @default("active") // active | pending | rejected
   state            String?
