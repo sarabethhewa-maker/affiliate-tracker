@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSettings } from "@/app/contexts/SettingsContext";
@@ -55,6 +55,43 @@ export default function SettingsPage() {
   const [trackingTestResult, setTrackingTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [webhookConfigured, setWebhookConfigured] = useState<boolean | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
+  const [deleteAllStep, setDeleteAllStep] = useState<1 | 2 | 3 | null>(null);
+  const [deleteAllConfirmText, setDeleteAllConfirmText] = useState("");
+  const [deleteAllCountdown, setDeleteAllCountdown] = useState<number | null>(null);
+  const [deleteAllProgress, setDeleteAllProgress] = useState(false);
+  const deleteAllCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (deleteAllStep !== 3 || deleteAllCountdown === null) return;
+    if (deleteAllCountdown <= 0) {
+      setDeleteAllCountdown(null);
+      setDeleteAllStep(null);
+      setDeleteAllProgress(true);
+      (async () => {
+        try {
+          const res = await fetch("/api/admin/delete-all-affiliates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation: "DELETE ALL AFFILIATES" }) });
+          if (res.ok) {
+            setMessage({ type: "ok", text: "All affiliate data has been cleared. The system is ready for fresh data." });
+            refetch();
+          } else {
+            const data = await res.json().catch(() => ({}));
+            setMessage({ type: "err", text: data.error || "Delete failed" });
+          }
+        } finally {
+          setDeleteAllProgress(false);
+        }
+      })();
+      return;
+    }
+    const id = setInterval(() => {
+      setDeleteAllCountdown((c) => (c === null ? null : c - 1));
+    }, 1000);
+    deleteAllCountdownRef.current = id;
+    return () => {
+      clearInterval(id);
+      deleteAllCountdownRef.current = null;
+    };
+  }, [deleteAllStep, deleteAllCountdown, refetch]);
 
   useEffect(() => {
     setTiers(initial.tiers.length ? initial.tiers : [...DEFAULT_TIERS]);
@@ -660,6 +697,58 @@ add_action('woocommerce_checkout_update_order_meta', function ($order_id) {
           )}
         </div>
       )}
+
+      <div style={{ marginTop: 48, paddingTop: 24, borderTop: `1px solid ${THEME.border}` }}>
+        {!dangerZoneOpen ? (
+          <button type="button" onClick={() => setDangerZoneOpen(true)} style={{ background: "none", border: "none", color: THEME.textMuted, fontSize: 12, cursor: "pointer", padding: 0 }}>Show Danger Zone</button>
+        ) : (
+          <div style={{ border: "2px solid #dc2626", borderRadius: 12, padding: 20, background: "#fef2f2" }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: "#b91c1c", marginBottom: 12 }}>Danger Zone</h3>
+            <p style={{ fontSize: 12, color: "#991b1b", marginBottom: 16 }}>These actions are irreversible and will permanently destroy data.</p>
+            <button type="button" onClick={() => setDeleteAllStep(1)} disabled={deleteAllProgress} style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: deleteAllProgress ? "not-allowed" : "pointer" }}>
+              <span aria-hidden>⚠️</span> Delete All Affiliates
+            </button>
+          </div>
+        )}
+      </div>
+
+      {deleteAllStep !== null && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => { if (deleteAllStep === 3 && deleteAllCountdown !== null) return; if (deleteAllCountdownRef.current) clearInterval(deleteAllCountdownRef.current); setDeleteAllStep(null); setDeleteAllConfirmText(""); setDeleteAllCountdown(null); }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            {deleteAllStep === 1 && (
+              <>
+                <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>WARNING</h3>
+                <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 20 }}>This will permanently delete ALL affiliates and ALL associated data (clicks, conversions, payouts, slug history, fraud flags, generated links — everything). This is intended for clearing test data before going live. This CANNOT be undone.</p>
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <button type="button" onClick={() => setDeleteAllStep(null)} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                  <button type="button" onClick={() => setDeleteAllStep(2)} style={{ padding: "10px 18px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Continue</button>
+                </div>
+              </>
+            )}
+            {deleteAllStep === 2 && (
+              <>
+                <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>Type to confirm</h3>
+                <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 8 }}>Type <strong>DELETE ALL AFFILIATES</strong> exactly.</p>
+                <input type="text" value={deleteAllConfirmText} onChange={e => setDeleteAllConfirmText(e.target.value)} placeholder="DELETE ALL AFFILIATES" style={{ width: "100%", padding: "10px 12px", border: `1px solid ${THEME.border}`, borderRadius: 8, marginBottom: 16, fontSize: 14 }} />
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <button type="button" onClick={() => { setDeleteAllStep(null); setDeleteAllConfirmText(""); }} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                  <button type="button" disabled={deleteAllConfirmText !== "DELETE ALL AFFILIATES"} onClick={() => { setDeleteAllStep(3); setDeleteAllCountdown(5); }} style={{ padding: "10px 18px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Continue</button>
+                </div>
+              </>
+            )}
+            {deleteAllStep === 3 && (
+              <>
+                <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>Deleting in {deleteAllCountdown ?? 0}...</h3>
+                <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 20 }}>Click Cancel to abort.</p>
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <button type="button" onClick={() => { if (deleteAllCountdownRef.current) clearInterval(deleteAllCountdownRef.current); setDeleteAllStep(null); setDeleteAllCountdown(null); }} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

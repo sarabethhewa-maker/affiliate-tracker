@@ -372,6 +372,11 @@ export default function Page() {
   const [storeCreditAmount, setStoreCreditAmount] = useState("");
   const [storeCreditSaving, setStoreCreditSaving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedAffiliateIds, setSelectedAffiliateIds] = useState<Set<string>>(new Set());
+  const [bulkArchiveModal, setBulkArchiveModal] = useState(false);
+  const [bulkDeleteStep, setBulkDeleteStep] = useState<1 | 2 | null>(null);
+  const [bulkDeleteConfirmText, setBulkDeleteConfirmText] = useState("");
+  const [bulkProgress, setBulkProgress] = useState<string | null>(null);
   const [archiveConfirm, setArchiveConfirm] = useState<{ id: string; name: string; archived: boolean } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ step: 1 | 2; id: string; name: string } | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
@@ -1372,6 +1377,22 @@ export default function Page() {
                 <input placeholder="Search affiliates..." value={search} onChange={e => setSearch(e.target.value)}
                   style={{ flex: 1, minWidth: 200, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px", color: THEME.text, fontSize: 13, outline: "none" }} />
               </div>
+              {filtered.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, padding: "8px 0" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: THEME.textMuted }}>
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && filtered.every(a => selectedAffiliateIds.has(a.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedAffiliateIds(new Set(filtered.map(a => a.id)));
+                        else setSelectedAffiliateIds(new Set());
+                      }}
+                      style={{ accentColor: THEME.accent }}
+                    />
+                    Select All
+                  </label>
+                </div>
+              )}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {filtered.map(aff => {
                   const rev = aff.conversions.reduce((s, c) => s + c.amount, 0);
@@ -1390,6 +1411,19 @@ export default function Page() {
                   return (
                     <div key={aff.id} style={{ background: highlightedAffiliateId === aff.id ? "#e0f2fe" : THEME.card, border: `2px solid ${highlightedAffiliateId === aff.id ? THEME.accentLight : THEME.border}`, borderRadius: 10, padding: "16px 20px", transition: "border 0.2s, background 0.2s", opacity: isArchived ? 0.92 : 1 }}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" as const }}>
+                        <label style={{ display: "flex", alignItems: "center", cursor: "pointer", flexShrink: 0 }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedAffiliateIds.has(aff.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedAffiliateIds);
+                              if (e.target.checked) next.add(aff.id);
+                              else next.delete(aff.id);
+                              setSelectedAffiliateIds(next);
+                            }}
+                            style={{ accentColor: THEME.accent, width: 18, height: 18 }}
+                          />
+                        </label>
                         <div style={{ width: 42, height: 42, borderRadius: "50%", background: TIERS[vol.tierKey]?.bg, border: `2px solid ${TIERS[vol.tierKey]?.color}50`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: TIERS[vol.tierKey]?.color, flexShrink: 0 }}>{aff.name.charAt(0)}</div>
                         <div style={{ flex: 1, minWidth: 200 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3, flexWrap: "wrap" as const }}>
@@ -1689,6 +1723,78 @@ export default function Page() {
                 })}
                 {filtered.length === 0 && <div style={{ color: THEME.textMuted, fontSize: 13, textAlign: "center", padding: 40 }}>No affiliates found</div>}
               </div>
+              {selectedAffiliateIds.size > 0 && (
+                <div style={{ position: "sticky", bottom: 0, left: 0, right: 0, marginTop: 16, padding: "14px 20px", background: THEME.card, border: `2px solid ${THEME.border}`, borderRadius: 12, boxShadow: "0 -4px 12px rgba(0,0,0,0.08)", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 600, color: THEME.text }}>{selectedAffiliateIds.size} affiliates selected</span>
+                  <button type="button" onClick={() => setBulkArchiveModal(true)} disabled={!!bulkProgress} style={{ padding: "8px 16px", background: "#f0c040", color: "#1a1a2e", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: bulkProgress ? "not-allowed" : "pointer" }}>Bulk Archive</button>
+                  <button type="button" onClick={() => { setBulkDeleteStep(1); setBulkDeleteConfirmText(""); }} disabled={!!bulkProgress} style={{ padding: "8px 16px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: bulkProgress ? "not-allowed" : "pointer" }}>Bulk Delete</button>
+                  <button type="button" onClick={() => setSelectedAffiliateIds(new Set())} disabled={!!bulkProgress} style={{ padding: "8px 16px", background: THEME.bg, color: THEME.text, border: `1px solid ${THEME.border}`, borderRadius: 8, fontSize: 13, cursor: bulkProgress ? "not-allowed" : "pointer" }}>Cancel</button>
+                </div>
+              )}
+              {bulkArchiveModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => !bulkProgress && setBulkArchiveModal(false)}>
+                  <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+                    <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>Archive affiliates?</h3>
+                    <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 20 }}>Archive {selectedAffiliateIds.size} affiliates? They will be hidden from the active list but their data will be preserved.</p>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                      <button type="button" onClick={() => setBulkArchiveModal(false)} disabled={!!bulkProgress} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                      <button type="button" disabled={!!bulkProgress} onClick={async () => {
+                        setBulkProgress(`Archiving... ${selectedAffiliateIds.size} affiliates`);
+                        try {
+                          const res = await fetch("/api/affiliates/bulk-archive", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ affiliateIds: Array.from(selectedAffiliateIds) }) });
+                          if (res.ok) {
+                            setSuccessToast(`Archived ${selectedAffiliateIds.size} affiliates`);
+                            setSelectedAffiliateIds(new Set());
+                            setBulkArchiveModal(false);
+                            fetchAffiliates();
+                          }
+                        } finally { setBulkProgress(null); }
+                      }} style={{ padding: "10px 18px", background: "#f0c040", color: "#1a1a2e", border: "none", borderRadius: 8, fontWeight: 600, cursor: bulkProgress ? "not-allowed" : "pointer" }}>{bulkProgress ? "Archiving…" : "Archive"}</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {bulkDeleteStep !== null && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => { if (!bulkProgress) { setBulkDeleteStep(null); setBulkDeleteConfirmText(""); } }}>
+                  <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+                    {bulkDeleteStep === 1 && (
+                      <>
+                        <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>Permanently delete {selectedAffiliateIds.size} affiliates?</h3>
+                        <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 20 }}>This will remove all their data including clicks, conversions, and payout history. This cannot be undone.</p>
+                        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                          <button type="button" onClick={() => { setBulkDeleteStep(null); setBulkDeleteConfirmText(""); }} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                          <button type="button" onClick={() => setBulkDeleteStep(2)} style={{ padding: "10px 18px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>Continue</button>
+                        </div>
+                      </>
+                    )}
+                    {bulkDeleteStep === 2 && (
+                      <>
+                        <h3 style={{ marginBottom: 12, fontSize: 18, fontWeight: 700, color: THEME.text }}>Type to confirm</h3>
+                        <p style={{ color: THEME.textMuted, fontSize: 14, marginBottom: 8 }}>Type <strong>DELETE {selectedAffiliateIds.size} AFFILIATES</strong> to confirm.</p>
+                        <input type="text" value={bulkDeleteConfirmText} onChange={e => setBulkDeleteConfirmText(e.target.value)} placeholder={`DELETE ${selectedAffiliateIds.size} AFFILIATES`} style={{ width: "100%", padding: "10px 12px", border: `1px solid ${THEME.border}`, borderRadius: 8, marginBottom: 16, fontSize: 14 }} />
+                        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                          <button type="button" onClick={() => { setBulkDeleteStep(null); setBulkDeleteConfirmText(""); }} style={{ padding: "10px 18px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                          <button type="button" disabled={bulkDeleteConfirmText !== `DELETE ${selectedAffiliateIds.size} AFFILIATES` || !!bulkProgress} onClick={async () => {
+                            const ids = Array.from(selectedAffiliateIds);
+                            setBulkProgress("Deleting... 0/" + ids.length);
+                            try {
+                              for (let i = 0; i < ids.length; i++) {
+                                await fetch("/api/affiliates/" + ids[i], { method: "DELETE" });
+                                setBulkProgress(`Deleting... ${i + 1}/${ids.length} complete`);
+                              }
+                              setSuccessToast(`Deleted ${ids.length} affiliates`);
+                              setSelectedAffiliateIds(new Set());
+                              setBulkDeleteStep(null);
+                              setBulkDeleteConfirmText("");
+                              fetchAffiliates();
+                            } finally { setBulkProgress(null); }
+                            }} style={{ padding: "10px 18px", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer" }}>{bulkProgress || "Confirm Delete"}</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
