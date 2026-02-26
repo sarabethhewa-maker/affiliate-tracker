@@ -96,6 +96,7 @@ export default function PortalDashboardPage() {
   const [copiedTrack, setCopiedTrack] = useState(false);
   const [copiedRecruit, setCopiedRecruit] = useState(false);
   const [calculatorRevenue, setCalculatorRevenue] = useState(500);
+  const [announcements, setAnnouncements] = useState<{ id: string; title: string; content: string; priority: string; pinned: boolean; publishedAt: string; expiresAt: string | null }[]>([]);
 
   const fetchMe = useCallback(async () => {
     const url = previewId
@@ -116,6 +117,14 @@ export default function PortalDashboardPage() {
   useEffect(() => {
     fetchMe();
   }, [fetchMe]);
+
+  useEffect(() => {
+    if (!data?.affiliate) return;
+    fetch("/api/announcements")
+      .then((r) => r.ok ? r.json() : [])
+      .then((list) => setAnnouncements(Array.isArray(list) ? list : []))
+      .catch(() => setAnnouncements([]));
+  }, [data?.affiliate]);
 
   useEffect(() => {
     if (loading || !data) return;
@@ -171,11 +180,49 @@ export default function PortalDashboardPage() {
     tierNames[String(i)] = t.name;
   });
 
+  const now = new Date();
+  const activeAnnouncements = announcements.filter(
+    (a) => new Date(a.publishedAt) <= now && (!a.expiresAt || new Date(a.expiresAt) > now)
+  );
+  const displayedAnnouncements = activeAnnouncements.slice(0, 3);
+  const hasMoreAnnouncements = activeAnnouncements.length > 3;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800, color: THEME.text }}>
         Dashboard
       </h1>
+
+      {/* Announcements */}
+      {displayedAnnouncements.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {displayedAnnouncements.map((a) => {
+            const borderColor = a.priority === "urgent" ? "#b91c1c" : a.priority === "important" ? "#1a4a8a" : "#e2e8f0";
+            return (
+              <div
+                key={a.id}
+                style={{
+                  background: THEME.card,
+                  border: `1px solid ${THEME.border}`,
+                  borderLeft: `4px solid ${borderColor}`,
+                  borderRadius: 12,
+                  padding: 20,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: THEME.text }}>{a.title}</span>
+                  {a.pinned && <span style={{ fontSize: 12 }} title="Pinned">📌</span>}
+                </div>
+                <p style={{ color: THEME.textMuted, fontSize: 14, margin: 0, whiteSpace: "pre-wrap" }}>{a.content}</p>
+              </div>
+            );
+          })}
+          {hasMoreAnnouncements && (
+            <Link href="/portal/announcements" style={{ fontSize: 13, color: THEME.accent, fontWeight: 600, textDecoration: "none" }}>View all announcements →</Link>
+          )}
+        </div>
+      )}
 
       {/* Welcome card */}
       <div

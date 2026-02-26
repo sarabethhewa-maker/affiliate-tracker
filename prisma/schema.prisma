@@ -126,3 +126,16 @@ model SlugHistory {
   changedAt   DateTime @default(now())
   affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
 }
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  priority    String    @default("normal") // normal | important | urgent
+  pinned      Boolean   @default(false)
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

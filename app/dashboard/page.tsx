@@ -377,6 +377,9 @@ export default function Page() {
   const [inlineEdit, setInlineEdit] = useState<{ affId: string; field: string } | null>(null);
   const [inlineEditValue, setInlineEditValue] = useState("");
   const [inlineSaving, setInlineSaving] = useState(false);
+  const [announcements, setAnnouncements] = useState<{ id: string; title: string; content: string; priority: string; pinned: boolean; publishedAt: string; expiresAt: string | null; createdBy: string; createdAt: string; updatedAt: string }[]>([]);
+  const [announcementModal, setAnnouncementModal] = useState<{ id: string | null; title: string; content: string; priority: string; pinned: boolean; expiresAt: string } | null>(null);
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
 
   const getDateRange = useCallback((): { start: Date; end: Date } => {
     const end = new Date();
@@ -439,6 +442,20 @@ export default function Page() {
   useEffect(() => {
     if (tab === "affiliates") fetchAffiliates();
   }, [tab, showArchived]);
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const res = await fetch("/api/announcements");
+      if (!res.ok) return;
+      const data = await res.json();
+      setAnnouncements(Array.isArray(data) ? data : []);
+    } catch {
+      setAnnouncements([]);
+    }
+  }, []);
+  useEffect(() => {
+    if (tab === "announcements") fetchAnnouncements();
+  }, [tab, fetchAnnouncements]);
 
   const fetchActivity = useCallback(async () => {
     try {
@@ -661,6 +678,7 @@ export default function Page() {
   const NAV = [
     { id: "settings", label: "Settings & Customization", icon: "⚙", href: "/dashboard/settings", isLink: true as const, tooltip: "Program settings, tiers, Tipalti, WooCommerce, email marketing, and admin emails." },
     { id: "dashboard", label: "Dashboard", icon: "▦", tooltip: "Your overview. See total revenue, clicks, conversions and top performers at a glance." },
+    { id: "announcements", label: "Announcements", icon: "🔔", tooltip: "Post updates that affiliates see in their portal." },
     { id: "conversions", label: "Conversion Status", icon: "◉", tooltip: "A conversion is recorded when a customer makes a purchase through the affiliate's link. Approve and mark paid here." },
     { id: "affiliates", label: "Affiliates", icon: "◈", tooltip: "Manage all your affiliates here. Add new ones, copy their tracking links, and see their stats." },
     { id: "import", label: "Import Affiliates", icon: "⬇", tooltip: "Import affiliates from CSV, paste, TapAffiliate, GoAffPro, or Tune." },
@@ -949,12 +967,16 @@ export default function Page() {
                 {tab === "payouts" && "Payout Overview"}
                 {tab === "calculator" && "Commission Calculator"}
                 {tab === "states" && "Affiliates by State"}
+                {tab === "announcements" && "Announcements"}
               </h1>
               <div style={{ color: THEME.textMuted, fontSize: 13 }}>Affiliate Program</div>
             </div>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <Link href="/portal" style={{ minHeight: 44, padding: "10px 16px", background: "transparent", border: `1px solid ${THEME.accent}`, borderRadius: 8, color: THEME.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Affiliate dashboard</Link>
               <button type="button" onClick={() => setSearchOpen(true)} className="admin-touch-btn" style={{ minHeight: 44, padding: "10px 14px", background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, fontSize: 12, cursor: "pointer" }} title="Quick search (⌘K)">⌘K</button>
+              {tab === "announcements" && (
+                <button type="button" onClick={() => setAnnouncementModal({ id: null, title: "", content: "", priority: "normal", pinned: false, expiresAt: "" })} style={{ minHeight: 44, padding: "10px 18px", background: "#1a4a8a", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>New Announcement</button>
+              )}
               {tab === "conversions" && (
                 <button onClick={() => setShowLogSale(true)} className="admin-touch-btn"
                   style={{ minHeight: 44, background: `linear-gradient(135deg, ${THEME.success}, #0d9a4d)`, border: "none", borderRadius: 10, padding: "11px 20px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
@@ -1504,6 +1526,49 @@ export default function Page() {
 
           {!loading && tab === "import" && <ImportAffiliatesTab onImport={fetchAffiliates} />}
 
+          {!loading && tab === "announcements" && (
+            <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ padding: 20, borderBottom: `1px solid ${THEME.border}` }}>
+                <div style={{ color: THEME.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" as const, marginBottom: 4 }}>All announcements</div>
+                <p style={{ color: THEME.textMuted, fontSize: 13, margin: 0 }}>Affiliates see active announcements in their portal. Pinned and urgent show first.</p>
+              </div>
+              <div style={{ padding: 20 }}>
+                {announcements.length === 0 ? (
+                  <div style={{ color: THEME.textMuted, fontSize: 13, textAlign: "center", padding: 40 }}>No announcements yet. Click New Announcement to create one.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {announcements.map((a) => {
+                      const priorityStyle = a.priority === "urgent" ? { background: "#fee2e2", color: "#b91c1c", border: "1px solid #b91c1c60" } : a.priority === "important" ? { background: "#dbeafe", color: "#1a4a8a", border: "1px solid #1a4a8a60" } : { background: "#f1f5f9", color: "#4a5568", border: "1px solid #e2e8f0" };
+                      const preview = a.content.slice(0, 100) + (a.content.length > 100 ? "…" : "");
+                      return (
+                        <div key={a.id} style={{ background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: 16 }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 700, fontSize: 15, color: THEME.text }}>{a.title}</span>
+                                {a.pinned && <span style={{ fontSize: 14 }} title="Pinned">📌</span>}
+                                <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, ...priorityStyle }}>{a.priority}</span>
+                              </div>
+                              <p style={{ color: THEME.textMuted, fontSize: 13, margin: "0 0 8px 0", whiteSpace: "pre-wrap" }}>{preview}</p>
+                              <div style={{ fontSize: 11, color: THEME.textMuted }}>
+                                Published {new Date(a.publishedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                                {a.expiresAt ? ` · Expires ${new Date(a.expiresAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}` : " · Never expires"}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button type="button" onClick={() => setAnnouncementModal({ id: a.id, title: a.title, content: a.content, priority: a.priority, pinned: a.pinned, expiresAt: a.expiresAt ? new Date(a.expiresAt).toISOString().slice(0, 10) : "" })} style={{ padding: "6px 12px", fontSize: 12, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 6, color: THEME.text, cursor: "pointer" }}>Edit</button>
+                              <button type="button" onClick={async () => { if (confirm("Delete this announcement?")) { await fetch("/api/announcements/" + a.id, { method: "DELETE" }); fetchAnnouncements(); } }} style={{ padding: "6px 12px", fontSize: 12, background: "#fee2e2", border: "1px solid #b91c1c", borderRadius: 6, color: "#b91c1c", cursor: "pointer" }}>Delete</button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {!loading && tab === "mlm" && (
             <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 28 }} data-tour="mlm-content">
               <div style={{ color: THEME.textMuted, fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" as const, marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>Network Hierarchy <Tooltip text="Shows the full network of who recruited who. Each level earns a smaller override commission." /></div>
@@ -1935,6 +2000,60 @@ export default function Page() {
               >
                 {slugModalSaving ? "Saving…" : "Save"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Announcement Create/Edit Modal */}
+      {announcementModal && (
+        <div style={{ position: "fixed", inset: 0, background: THEME.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 24, width: 480, maxWidth: "95vw", maxHeight: "90vh", overflow: "auto", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: THEME.text, margin: 0 }}>{announcementModal.id ? "Edit announcement" : "New announcement"}</h2>
+              <button type="button" onClick={() => setAnnouncementModal(null)} style={{ background: "none", border: "none", color: THEME.textMuted, fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Title (required)</label>
+                <input type="text" value={announcementModal.title} onChange={(e) => setAnnouncementModal((m) => m ? { ...m, title: e.target.value } : null)} placeholder="Announcement title" style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8 }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Content (required)</label>
+                <textarea value={announcementModal.content} onChange={(e) => setAnnouncementModal((m) => m ? { ...m, content: e.target.value } : null)} placeholder="Message for affiliates" rows={4} style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8, resize: "vertical" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Priority</label>
+                <select value={announcementModal.priority} onChange={(e) => setAnnouncementModal((m) => m ? { ...m, priority: e.target.value } : null)} style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8 }}>
+                  <option value="normal">Normal</option>
+                  <option value="important">Important</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14, color: THEME.text }}>
+                <input type="checkbox" checked={announcementModal.pinned} onChange={(e) => setAnnouncementModal((m) => m ? { ...m, pinned: e.target.checked } : null)} />
+                Pin to top
+              </label>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: THEME.textMuted, marginBottom: 6 }}>Expiration date (optional)</label>
+                <input type="date" value={announcementModal.expiresAt} onChange={(e) => setAnnouncementModal((m) => m ? { ...m, expiresAt: e.target.value } : null)} style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${THEME.border}`, borderRadius: 8 }} />
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button type="button" onClick={() => setAnnouncementModal(null)} style={{ flex: 1, padding: "10px 0", background: "none", border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textMuted, cursor: "pointer" }}>Cancel</button>
+                <button type="button" disabled={announcementSaving || !announcementModal.title.trim() || !announcementModal.content.trim()} onClick={async () => {
+                  if (!announcementModal.title.trim() || !announcementModal.content.trim()) return;
+                  setAnnouncementSaving(true);
+                  try {
+                    if (announcementModal.id) {
+                      await fetch("/api/announcements/" + announcementModal.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: announcementModal.title.trim(), content: announcementModal.content.trim(), priority: announcementModal.priority, pinned: announcementModal.pinned, expiresAt: announcementModal.expiresAt || null }) });
+                    } else {
+                      await fetch("/api/announcements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: announcementModal.title.trim(), content: announcementModal.content.trim(), priority: announcementModal.priority, pinned: announcementModal.pinned, expiresAt: announcementModal.expiresAt || null }) });
+                    }
+                    setAnnouncementModal(null);
+                    fetchAnnouncements();
+                  } finally { setAnnouncementSaving(false); }
+                }} style={{ flex: 1, padding: "10px 0", background: "#1a4a8a", border: "none", borderRadius: 8, color: "#fff", cursor: announcementSaving ? "not-allowed" : "pointer", fontWeight: 600 }}>{announcementSaving ? "Saving…" : "Publish"}</button>
+              </div>
             </div>
           </div>
         </div>
