@@ -18,21 +18,43 @@ const THEME = {
   errorBg: "#fee2e2",
 };
 
-const COLUMN_OPTIONS = ["Name", "Email", "Tier", "Phone", "Social Handle", "Referred By", "Skip"] as const;
-const CSV_TEMPLATE = "name,email,tier,phone,social_handle,referred_by_email,monthly_sales_override,notes\nJane Doe,jane@example.com,silver,,@jane,,,\n";
+const COLUMN_OPTIONS = [
+  "Name",
+  "Email",
+  "Phone",
+  "Tier",
+  "Social Handle",
+  "Website URL",
+  "Coupon Code",
+  "Total Conversions",
+  "Total Revenue",
+  "Total Payout",
+  "Commission Rate",
+  "Referred By",
+  "Skip",
+] as const;
+
+const CSV_TEMPLATE =
+  "name,email,phone,tier,social_handle,website_url,coupon_code,total_conversions,total_revenue,total_payout,commission_rate,referred_by_email,notes\nJane Doe,jane@example.com,(555) 123-4567,silver,@jane,https://example.com,JANE15,42,5000.00,500.00,10,,Met at conference\n";
 
 type ImportRow = {
   name: string;
-  email: string;
+  email?: string;
   tier?: string;
   phone?: string;
   socialHandle?: string;
+  websiteUrl?: string;
+  couponCode?: string;
+  totalConversions?: number;
+  totalRevenue?: number;
+  totalPayout?: number;
+  commissionRate?: number;
   referred_by_email?: string;
   notes?: string;
 };
 
-/** Column mapping: ImportRow keys or "skip" (exclude column from import). */
-type ColumnMapping = keyof ImportRow | "skip";
+/** Column mapping: display label (matches COLUMN_OPTIONS) or "skip". */
+type ColumnMapping = (typeof COLUMN_OPTIONS)[number];
 
 type ImportLogEntry = {
   id: string;
@@ -54,7 +76,18 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   const [updateExisting, setUpdateExisting] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<"active" | "pending">("active");
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; updated: number; skipped: number; errors: number } | null>(null);
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    updated: number;
+    skipped: number;
+    errors: number;
+    summary?: {
+      tierBreakdown?: { silver: number; gold: number; master: number };
+      totalHistoricalRevenue?: number;
+      totalHistoricalPayouts?: number;
+      skippedReasons?: { row: number; reason: string }[];
+    };
+  } | null>(null);
   const [pasteText, setPasteText] = useState("");
   const [pasteParsed, setPasteParsed] = useState<ImportRow[]>([]);
   const [pasteTier, setPasteTier] = useState("0");
@@ -107,6 +140,7 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
             updated: data.updated ?? 0,
             skipped: data.skipped ?? 0,
             errors: data.errors ?? 0,
+            summary: data.summary ?? undefined,
           });
           onImport();
           loadImportLogs();
@@ -131,29 +165,34 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
   ];
 
   const mapCsvToRows = useCallback((): ImportRow[] => {
-    const fieldToKey: Record<string, ColumnMapping> = {
-      Name: "name",
-      Email: "email",
-      Tier: "tier",
-      Phone: "phone",
-      "Social Handle": "socialHandle",
-      "Referred By": "referred_by_email",
-      Skip: "skip",
-    };
     return csvRows
       .map((row) => {
-        const out: Record<string, string> = {};
+        const out: Record<string, string | number | undefined> = {};
         csvHeaders.forEach((h) => {
-          const mapped = columnMap[h] || h;
+          const mapped = columnMap[h] || "Skip";
           if (mapped === "Skip") return;
-          const key = fieldToKey[mapped];
-          if (key && key !== "skip" && row[h] !== undefined) out[key] = String(row[h]).trim();
+          const raw = row[h] != null ? String(row[h]).trim() : "";
+          if (raw === "") return;
+          if (mapped === "Name") out.name = raw;
+          else if (mapped === "Email") out.email = raw;
+          else if (mapped === "Tier") out.tier = raw;
+          else if (mapped === "Phone") out.phone = raw;
+          else if (mapped === "Social Handle") out.socialHandle = raw;
+          else if (mapped === "Website URL") out.websiteUrl = raw;
+          else if (mapped === "Coupon Code") out.couponCode = raw;
+          else if (mapped === "Total Conversions") out.totalConversions = parseFloat(raw) || 0;
+          else if (mapped === "Total Revenue") out.totalRevenue = parseFloat(raw.replace(/[$,]/g, "")) || 0;
+          else if (mapped === "Total Payout") out.totalPayout = parseFloat(raw.replace(/[$,]/g, "")) || 0;
+          else if (mapped === "Commission Rate") out.commissionRate = parseFloat(raw.replace(/%/g, "")) || 0;
+          else if (mapped === "Referred By") out.referred_by_email = raw;
         });
-        if (!out.email) return null;
-        return out as unknown as ImportRow;
+        if (!out.name) return null;
+        return out as ImportRow;
       })
       .filter(Boolean) as ImportRow[];
   }, [csvRows, csvHeaders, columnMap]);
+
+  const importableCount = mapCsvToRows().length;
 
   const parsePaste = useCallback(() => {
     const lines = pasteText.split(/\n/).map((l) => l.trim()).filter(Boolean);
@@ -214,26 +253,30 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const rows = (results.data as Record<string, string>[]).filter((r) => Object.keys(r).length > 0);
+        const rawRows = (results.data as Record<string, string>[]) || [];
+        const isRowEmpty = (r: Record<string, string>) =>
+          Object.keys(r).length === 0 || Object.values(r).every((v) => String(v).trim() === "");
+        const rows = rawRows.filter((r) => !isRowEmpty(r));
         const headers = rows.length ? Object.keys(rows[0]) : [];
         setCsvRows(rows);
         setCsvHeaders(headers);
-        const lower = (s: string) => s.trim().toLowerCase();
+        const lower = (s: string) => s.trim().toLowerCase().replace(/_/g, " ");
         const autoMap: Record<string, string> = {};
-        const nameAliases = ["name", "full name", "fullname"];
-        const emailAliases = ["email", "email address"];
-        const tierAliases = ["tier", "level"];
-        const phoneAliases = ["phone", "telephone"];
-        const socialAliases = ["instagram", "social", "social_handle", "social handle"];
-        const refAliases = ["referred_by", "referred_by_email", "referrer"];
         headers.forEach((h) => {
           const l = lower(h);
-          if (nameAliases.some((a) => l.includes(a))) autoMap[h] = "Name";
-          else if (emailAliases.some((a) => l.includes(a))) autoMap[h] = "Email";
-          else if (tierAliases.some((a) => l.includes(a))) autoMap[h] = "Tier";
-          else if (phoneAliases.some((a) => l.includes(a))) autoMap[h] = "Phone";
-          else if (socialAliases.some((a) => l.includes(a))) autoMap[h] = "Social Handle";
-          else if (refAliases.some((a) => l.includes(a))) autoMap[h] = "Referred By";
+          if (["affiliate", "name", "affiliate name", "full name", "fullname"].some((a) => l.includes(a) || l === a.replace(/ /g, "_"))) autoMap[h] = "Name";
+          else if (["email", "email address", "email_address"].some((a) => l.includes(a))) autoMap[h] = "Email";
+          else if (["phone", "telephone", "phone number", "phone_number"].some((a) => l.includes(a))) autoMap[h] = "Phone";
+          else if (["tier", "level"].some((a) => l.includes(a))) autoMap[h] = "Tier";
+          else if (["instagram", "social", "social_handle", "social handle", "handle"].some((a) => l.includes(a))) autoMap[h] = "Social Handle";
+          else if (["website", "website url", "website_url", "url"].some((a) => l.includes(a))) autoMap[h] = "Website URL";
+          else if (["coupon", "coupon code", "coupon_code"].some((a) => l.includes(a))) autoMap[h] = "Coupon Code";
+          else if (["gross_conversions", "total_conversions", "total conversions", "conversions"].some((a) => l.includes(a))) autoMap[h] = "Total Conversions";
+          else if (["net_revenue", "total_revenue", "total revenue", "revenue", "sales"].some((a) => l.includes(a))) autoMap[h] = "Total Revenue";
+          else if (["net_payout", "total_payout", "total payout", "payout", "commission"].some((a) => l.includes(a))) autoMap[h] = "Total Payout";
+          else if (["commission rate", "commission_rate", "rate"].some((a) => l.includes(a))) autoMap[h] = "Commission Rate";
+          else if (["referred_by", "referred_by_email", "referrer", "referred by"].some((a) => l.includes(a))) autoMap[h] = "Referred By";
+          else if (["offer", "program", "approved", "approved_conversions", "rejected", "rejected_conversions", "pending_conversions", "pending"].some((a) => l.includes(a))) autoMap[h] = "Skip";
           else autoMap[h] = "Skip";
         });
         setColumnMap(autoMap);
@@ -288,10 +331,12 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
       const res = await fetch(url);
       const data = await res.json();
       const list = data?.response?.data?.data ?? [];
-      const rows: ImportRow[] = (Object.values(list) as { first_name?: string; last_name?: string; email?: string }[]).map((a) => ({
-        name: [a.first_name, a.last_name].filter(Boolean).join(" ") || (a.email ?? ""),
-        email: a.email ?? "",
-      })).filter((r): r is ImportRow => !!r.email);
+      const rows: ImportRow[] = (Object.values(list) as { first_name?: string; last_name?: string; email?: string }[])
+        .map((a) => ({
+          name: [a.first_name, a.last_name].filter(Boolean).join(" ") || (a.email ?? ""),
+          email: a.email ?? "",
+        }))
+        .filter((r) => !!r.email) as ImportRow[];
       setTuneAffiliates(rows);
       setTuneConnected(true);
     } catch {
@@ -452,11 +497,11 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
             <button type="button" onClick={downloadTemplate} style={{ padding: "8px 16px", background: THEME.bg, border: `1px solid ${THEME.border}`, borderRadius: 8, cursor: "pointer", fontSize: 13 }}>Download CSV template</button>
             <button
               type="button"
-              disabled={importing || mapCsvToRows().length === 0}
+              disabled={importing || importableCount === 0}
               onClick={() => runImport(mapCsvToRows(), "csv")}
               style={{ padding: "8px 16px", background: importing ? THEME.textMuted : THEME.accent, color: "#fff", border: "none", borderRadius: 8, cursor: importing ? "not-allowed" : "pointer", fontSize: 13 }}
             >
-              {importing ? "Importing…" : `Import Now (${mapCsvToRows().length} affiliates)`}
+              {importing ? "Importing…" : `Import Now (${importableCount} affiliates)`}
             </button>
           </div>
         )}
@@ -483,11 +528,40 @@ export default function ImportAffiliatesTab({ onImport }: { onImport: () => void
 
         {importing && <div style={{ marginTop: 16, height: 6, background: THEME.border, borderRadius: 3, overflow: "hidden" }}><div style={{ width: "40%", height: "100%", background: THEME.accent, animation: "pulse 1s ease infinite" }} /></div>}
         {importResult && (
-          <div style={{ marginTop: 16, padding: 12, background: THEME.bg, borderRadius: 8, display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <span style={{ color: THEME.success, fontWeight: 600 }}>{importResult.imported} imported</span>
-            <span style={{ color: THEME.textMuted }}>{importResult.updated} updated</span>
-            <span style={{ color: THEME.warning }}>{importResult.skipped} skipped</span>
-            <span style={{ color: importResult.errors ? THEME.error : THEME.textMuted }}>{importResult.errors} errors</span>
+          <div style={{ marginTop: 16, padding: 16, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: THEME.text, marginBottom: 12 }}>Import summary</div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 12 }}>
+              <span style={{ color: THEME.success, fontWeight: 600 }}>{importResult.imported} imported</span>
+              <span style={{ color: THEME.textMuted }}>{importResult.updated} updated</span>
+              <span style={{ color: THEME.warning }}>{importResult.skipped} skipped</span>
+              <span style={{ color: importResult.errors ? THEME.error : THEME.textMuted }}>{importResult.errors} errors</span>
+            </div>
+            {importResult.summary && (
+              <>
+                {importResult.summary.tierBreakdown && (
+                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.textMuted }}>
+                    Tier breakdown: {importResult.summary.tierBreakdown.silver ?? 0} Silver, {importResult.summary.tierBreakdown.gold ?? 0} Gold, {importResult.summary.tierBreakdown.master ?? 0} Master
+                  </div>
+                )}
+                {(importResult.summary.totalHistoricalRevenue ?? 0) > 0 && (
+                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.text }}>Total historical revenue imported: ${importResult.summary.totalHistoricalRevenue!.toLocaleString()}</div>
+                )}
+                {(importResult.summary.totalHistoricalPayouts ?? 0) > 0 && (
+                  <div style={{ marginBottom: 8, fontSize: 13, color: THEME.text }}>Total historical payouts imported: ${importResult.summary.totalHistoricalPayouts!.toLocaleString()}</div>
+                )}
+                {importResult.summary.skippedReasons && importResult.summary.skippedReasons.length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: THEME.textMuted }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Skipped rows:</div>
+                    <ul style={{ margin: 0, paddingLeft: 20 }}>
+                      {importResult.summary.skippedReasons.slice(0, 10).map((s, i) => (
+                        <li key={i}>Row {s.row}: {s.reason}</li>
+                      ))}
+                      {importResult.summary.skippedReasons.length > 10 && <li>… and {importResult.summary.skippedReasons.length - 10} more</li>}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
