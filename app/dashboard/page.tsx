@@ -1765,7 +1765,7 @@ export default function Page() {
                             </div>
                             <div style={{ display: "flex", gap: 8 }}>
                               <button type="button" onClick={() => setAnnouncementModal({ id: a.id, title: a.title, content: a.content, priority: a.priority, pinned: a.pinned, expiresAt: a.expiresAt ? new Date(a.expiresAt).toISOString().slice(0, 10) : "" })} style={{ padding: "6px 12px", fontSize: 12, background: THEME.card, border: `1px solid ${THEME.border}`, borderRadius: 6, color: THEME.text, cursor: "pointer" }}>Edit</button>
-                              <button type="button" onClick={async () => { if (confirm("Delete this announcement?")) { await fetch("/api/announcements/" + a.id, { method: "DELETE" }); fetchAnnouncements(); } }} style={{ padding: "6px 12px", fontSize: 12, background: "#fee2e2", border: "1px solid #b91c1c", borderRadius: 6, color: "#b91c1c", cursor: "pointer" }}>Delete</button>
+                              <button type="button" onClick={async () => { if (confirm("Delete this announcement?")) { await fetch(`/api/announcements/${a.id}`, { method: "DELETE" }); fetchAnnouncements(); } }} style={{ padding: "6px 12px", fontSize: 12, background: "#fee2e2", border: "1px solid #b91c1c", borderRadius: 6, color: "#b91c1c", cursor: "pointer" }}>Delete</button>
                             </div>
                           </div>
                         </div>
