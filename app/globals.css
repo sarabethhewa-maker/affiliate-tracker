@@ -47,6 +47,10 @@
   --landing-hero-gradient: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(37,99,235,0.06) 0%, transparent 70%);
   --landing-step-bg: rgba(37,99,235,0.06);
   --landing-step-border: rgba(37,99,235,0.18);
+  --landing-tier-bronze: #92400e;
+  --landing-tier-silver: #475569;
+  --landing-tier-gold: #a16207;
+  --landing-tier-master: #2563eb;
 
   /* Signed-out screen */
   --signedout-bg: #f3f6fa;
@@ -100,6 +104,10 @@
   --landing-hero-gradient: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(37,99,235,0.08) 0%, transparent 70%);
   --landing-step-bg: rgba(37,99,235,0.1);
   --landing-step-border: rgba(37,99,235,0.25);
+  --landing-tier-bronze: #fbbf24;
+  --landing-tier-silver: #94a3b8;
+  --landing-tier-gold: #facc15;
+  --landing-tier-master: #60a5fa;
 
   /* Signed-out screen — dark */
   --signedout-bg: #060a0e;

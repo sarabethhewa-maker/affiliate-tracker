@@ -103,7 +103,7 @@ export default function LandingPage() {
       <section className="relative min-h-screen flex items-center justify-center pt-16 px-6">
         <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--landing-hero-gradient)" }} />
         <div className="relative max-w-4xl mx-auto text-center">
-          <div className="inline-block px-4 py-1.5 mb-8 rounded-full text-xs font-semibold tracking-wider uppercase" style={{ background: "rgba(37,99,235,0.12)", color: "#60a5fa", border: "1px solid rgba(37,99,235,0.2)" }}>
+          <div className="inline-block px-4 py-1.5 mb-8 rounded-full text-xs font-semibold tracking-wider uppercase" style={{ background: "rgba(37,99,235,0.12)", color: "#2563eb", border: "1px solid rgba(37,99,235,0.2)" }}>
             Biolongevity Labs Affiliate Program
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
@@ -193,7 +193,7 @@ export default function LandingPage() {
                     BEST
                   </span>
                 )}
-                <div className="text-sm font-semibold mb-2" style={{ color: tier.featured ? "#60a5fa" : tier.name === "Bronze" ? "#fbbf24" : tier.name === "Silver" ? "#94a3b8" : "#facc15" }}>
+                <div className="text-sm font-semibold mb-2" style={{ color: tier.featured ? "var(--landing-tier-master)" : tier.name === "Bronze" ? "var(--landing-tier-bronze)" : tier.name === "Silver" ? "var(--landing-tier-silver)" : "var(--landing-tier-gold)" }}>
                   {tier.name}
                 </div>
                 <div className="text-4xl font-extrabold mb-1">{tier.rate}</div>
