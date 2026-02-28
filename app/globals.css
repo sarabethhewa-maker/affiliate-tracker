@@ -1,8 +1,111 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Portal theme */
+  --theme-bg: #f8fafc;
+  --theme-card: #ffffff;
+  --theme-border: #e2e8f0;
+  --theme-text: #1a1a1a;
+  --theme-text-muted: #4a5568;
+  --theme-accent: #1e3a5f;
+  --theme-accent-light: #3a7ca5;
+  --theme-success: #0d7a3d;
+  --theme-success-bg: #dcfce7;
+  --theme-warning: #b45309;
+  --theme-warning-bg: #fef3c7;
+  --theme-unread-bg: #f0f5ff;
+  --theme-error: #b91c1c;
+  --theme-error-bg: #fee2e2;
+  --theme-input-bg: #f8f9fa;
+  --theme-bg-alt: #f8f9fa;
+  --theme-gold: #f0c040;
+
+  /* Landing page theme */
+  --landing-bg: #ffffff;
+  --landing-text: #0a1628;
+  --landing-text-muted: #4a5568;
+  --landing-section-alt: #f1f5f9;
+  --landing-card-bg: rgba(0,0,0,0.02);
+  --landing-card-border: rgba(0,0,0,0.06);
+  --landing-card-border-hover: rgba(0,0,0,0.14);
+  --landing-nav-bg: rgba(255,255,255,0.85);
+  --landing-nav-border: rgba(0,0,0,0.06);
+  --landing-pill-bg: rgba(0,0,0,0.04);
+  --landing-pill-border: rgba(0,0,0,0.08);
+  --landing-pill-text: #4a5568;
+  --landing-login-border: rgba(0,0,0,0.18);
+  --landing-login-hover: rgba(0,0,0,0.04);
+  --landing-login-text: rgba(0,0,0,0.65);
+  --landing-footer-border: rgba(0,0,0,0.06);
+  --landing-tier-default-bg: linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.01));
+  --landing-tier-default-border: rgba(0,0,0,0.06);
+  --landing-hero-gradient: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(37,99,235,0.06) 0%, transparent 70%);
+  --landing-step-bg: rgba(37,99,235,0.06);
+  --landing-step-border: rgba(37,99,235,0.18);
+
+  /* Signed-out screen */
+  --signedout-bg: #f3f6fa;
+  --signedout-text: #1a1a1a;
+  --signedout-text-muted: #6b7280;
+  --signedout-btn-bg: #1e3a5f;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+
+  /* Portal theme — dark */
+  --theme-bg: #0f172a;
+  --theme-card: #1e293b;
+  --theme-border: #334155;
+  --theme-text: #f1f5f9;
+  --theme-text-muted: #94a3b8;
+  --theme-accent: #3b82f6;
+  --theme-accent-light: #60a5fa;
+  --theme-success: #22c55e;
+  --theme-success-bg: rgba(34,197,94,0.12);
+  --theme-warning: #f59e0b;
+  --theme-warning-bg: rgba(245,158,11,0.12);
+  --theme-unread-bg: rgba(59,130,246,0.1);
+  --theme-error: #f87171;
+  --theme-error-bg: rgba(248,113,113,0.12);
+  --theme-input-bg: #1e293b;
+  --theme-bg-alt: #1e293b;
+  --theme-gold: #fbbf24;
+
+  /* Landing page — dark */
+  --landing-bg: #0a1628;
+  --landing-text: #ffffff;
+  --landing-text-muted: #8b9cb5;
+  --landing-section-alt: rgba(13,31,60,0.5);
+  --landing-card-bg: rgba(255,255,255,0.02);
+  --landing-card-border: rgba(255,255,255,0.05);
+  --landing-card-border-hover: rgba(255,255,255,0.12);
+  --landing-nav-bg: rgba(10,22,40,0.82);
+  --landing-nav-border: rgba(255,255,255,0.05);
+  --landing-pill-bg: rgba(255,255,255,0.04);
+  --landing-pill-border: rgba(255,255,255,0.08);
+  --landing-pill-text: #8b9cb5;
+  --landing-login-border: rgba(255,255,255,0.12);
+  --landing-login-hover: rgba(255,255,255,0.05);
+  --landing-login-text: rgba(255,255,255,0.75);
+  --landing-footer-border: rgba(255,255,255,0.05);
+  --landing-tier-default-bg: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  --landing-tier-default-border: rgba(255,255,255,0.06);
+  --landing-hero-gradient: radial-gradient(ellipse 70% 50% at 50% 40%, rgba(37,99,235,0.08) 0%, transparent 70%);
+  --landing-step-bg: rgba(37,99,235,0.1);
+  --landing-step-border: rgba(37,99,235,0.25);
+
+  /* Signed-out screen — dark */
+  --signedout-bg: #060a0e;
+  --signedout-text: #e8f0f8;
+  --signedout-text-muted: #5a6a7a;
+  --signedout-btn-bg: #1a4a8a;
 }
 
 @theme inline {
@@ -10,13 +113,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

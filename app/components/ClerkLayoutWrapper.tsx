@@ -17,20 +17,20 @@ export default function ClerkLayoutWrapper({ children }: { children: React.React
       <SignedOut>
         <div style={{
           display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          alignItems: 'center', height: '100vh', background: '#060a0e', gap: 16
+          alignItems: 'center', height: '100vh', background: 'var(--signedout-bg)', gap: 16
         }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
             <img src="/logo.png" alt="Biolongevity Labs" style={{ height: 60, width: 'auto', objectFit: 'contain' }} />
           </div>
-          <div style={{ color: '#e8f0f8', fontSize: 24, fontWeight: 800 }}>
+          <div style={{ color: 'var(--signedout-text)', fontSize: 24, fontWeight: 800 }}>
             Affiliate Dashboard
           </div>
-          <div style={{ color: '#5a6a7a', fontSize: 14, marginBottom: 8 }}>
+          <div style={{ color: 'var(--signedout-text-muted)', fontSize: 14, marginBottom: 8 }}>
             Biolongevity Labs — Internal Use Only
           </div>
           <SignInButton mode="modal">
             <button style={{
-              background: '#1a4a8a', color: 'white', padding: '12px 32px',
+              background: 'var(--signedout-btn-bg)', color: 'white', padding: '12px 32px',
               borderRadius: 8, border: 'none', fontSize: 15, cursor: 'pointer', fontWeight: 700
             }}>
               Sign In

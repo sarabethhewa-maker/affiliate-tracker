@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME = {
-  bg: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a1a",
-  textMuted: "#4a5568",
-  accent: "#1e3a5f",
-  success: "#0d7a3d",
-  warning: "#b45309",
-  warningBg: "#fef3c7",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  success: "var(--theme-success)",
+  warning: "var(--theme-warning)",
+  warningBg: "var(--theme-warning-bg)",
 };
 
 type MeResponse = {

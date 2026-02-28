@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import ThemeToggle from "@/app/components/ThemeToggle";
 
 const TIERS = [
   { name: "Bronze", rate: "7.5%", threshold: "Starting Tier", gradient: "from-amber-900/40 to-amber-800/20", border: "border-amber-700/30", accent: "text-amber-400" },
@@ -66,20 +67,21 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a1628] text-white overflow-x-hidden" style={{ fontFamily: "'Inter', 'DM Sans', system-ui, -apple-system, sans-serif" }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--landing-bg)", color: "var(--landing-text)", fontFamily: "'Inter', 'DM Sans', system-ui, -apple-system, sans-serif" }}>
 
       {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5" style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", background: "rgba(10,22,40,0.82)" }}>
+      <nav className="fixed top-0 left-0 right-0 z-50" style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", background: "var(--landing-nav-bg)", borderBottom: "1px solid var(--landing-nav-border)" }}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <img src="/logo.png" alt="Biolongevity Labs" className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/login"
               className="hidden sm:inline-flex px-5 py-2 text-sm font-semibold rounded-lg transition"
-              style={{ color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.12)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+              style={{ color: "var(--landing-login-text)", border: "1px solid var(--landing-login-border)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--landing-login-hover)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               Affiliate Login
@@ -99,8 +101,7 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center pt-16 px-6">
-        {/* Subtle radial gradient */}
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 50% 40%, rgba(37,99,235,0.08) 0%, transparent 70%)" }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--landing-hero-gradient)" }} />
         <div className="relative max-w-4xl mx-auto text-center">
           <div className="inline-block px-4 py-1.5 mb-8 rounded-full text-xs font-semibold tracking-wider uppercase" style={{ background: "rgba(37,99,235,0.12)", color: "#60a5fa", border: "1px solid rgba(37,99,235,0.2)" }}>
             Biolongevity Labs Affiliate Program
@@ -110,7 +111,7 @@ export default function LandingPage() {
             <span style={{ color: "#2563eb" }}>20%</span>{" "}
             Promoting Premium Peptides
           </h1>
-          <p className="text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed" style={{ color: "#8b9cb5" }}>
+          <p className="text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed" style={{ color: "var(--landing-text-muted)" }}>
             Join hundreds of affiliates earning industry-leading commissions on science-backed
             longevity products trusted by thousands of customers worldwide.
           </p>
@@ -126,9 +127,9 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="px-8 py-3.5 text-white font-semibold rounded-lg transition text-base w-full sm:w-auto text-center"
-              style={{ border: "1px solid rgba(255,255,255,0.18)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+              className="px-8 py-3.5 font-semibold rounded-lg transition text-base w-full sm:w-auto text-center"
+              style={{ color: "var(--landing-text)", border: "1px solid var(--landing-login-border)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--landing-login-hover)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               Sign In
@@ -139,7 +140,7 @@ export default function LandingPage() {
               <span
                 key={stat}
                 className="px-4 py-2 rounded-full text-sm font-medium"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#8b9cb5" }}
+                style={{ background: "var(--landing-pill-bg)", border: "1px solid var(--landing-pill-border)", color: "var(--landing-pill-text)" }}
               >
                 {stat}
               </span>
@@ -161,7 +162,7 @@ export default function LandingPage() {
           <p
             data-reveal
             className="text-center mb-14 max-w-xl mx-auto"
-            style={{ color: "#8b9cb5", opacity: 0, transform: "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+            style={{ color: "var(--landing-text-muted)", opacity: 0, transform: "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
           >
             Four tiers with automatic upgrades as your revenue grows. Start earning from day one.
           </p>
@@ -177,10 +178,10 @@ export default function LandingPage() {
                   transition: `opacity 0.7s ease ${i * 0.1}s, transform 0.7s ease ${i * 0.1}s`,
                   background: tier.featured
                     ? "linear-gradient(to bottom, rgba(37,99,235,0.18), rgba(37,99,235,0.06))"
-                    : "linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+                    : "var(--landing-card-bg)",
                   border: tier.featured
                     ? "1px solid rgba(37,99,235,0.4)"
-                    : "1px solid rgba(255,255,255,0.06)",
+                    : `1px solid var(--landing-tier-default-border)`,
                   ...(tier.featured ? { boxShadow: "0 0 40px rgba(37,99,235,0.2), inset 0 1px 0 rgba(37,99,235,0.15)" } : {}),
                 }}
               >
@@ -196,8 +197,8 @@ export default function LandingPage() {
                   {tier.name}
                 </div>
                 <div className="text-4xl font-extrabold mb-1">{tier.rate}</div>
-                <div className="text-sm" style={{ color: "#8b9cb5" }}>commission</div>
-                <div className="mt-4 pt-4 text-sm" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", color: "#8b9cb5" }}>
+                <div className="text-sm" style={{ color: "var(--landing-text-muted)" }}>commission</div>
+                <div className="mt-4 pt-4 text-sm" style={{ borderTop: `1px solid var(--landing-card-border)`, color: "var(--landing-text-muted)" }}>
                   {tier.threshold}
                 </div>
               </div>
@@ -207,7 +208,7 @@ export default function LandingPage() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="py-24 px-6" style={{ background: "rgba(13,31,60,0.5)" }}>
+      <section className="py-24 px-6" style={{ background: "var(--landing-section-alt)" }}>
         <div className="max-w-5xl mx-auto">
           <h2
             data-reveal
@@ -226,12 +227,12 @@ export default function LandingPage() {
               >
                 <div
                   className="w-14 h-14 mx-auto mb-5 rounded-full flex items-center justify-center font-bold text-lg"
-                  style={{ background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.25)", color: "#2563eb" }}
+                  style={{ background: "var(--landing-step-bg)", border: "1px solid var(--landing-step-border)", color: "#2563eb" }}
                 >
                   {step.num}
                 </div>
                 <h3 className="text-lg font-bold mb-2">{step.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: "#8b9cb5" }}>{step.desc}</p>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--landing-text-muted)" }}>{step.desc}</p>
               </div>
             ))}
           </div>
@@ -251,7 +252,7 @@ export default function LandingPage() {
           <p
             data-reveal
             className="text-center mb-14 max-w-xl mx-auto"
-            style={{ color: "#8b9cb5", opacity: 0, transform: "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
+            style={{ color: "var(--landing-text-muted)", opacity: 0, transform: "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
           >
             Everything you need to build a profitable affiliate business in the longevity space.
           </p>
@@ -265,20 +266,20 @@ export default function LandingPage() {
                   opacity: 0,
                   transform: "translateY(24px)",
                   transition: `opacity 0.7s ease ${i * 0.08}s, transform 0.7s ease ${i * 0.08}s, border-color 0.2s ease`,
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.05)",
+                  background: "var(--landing-card-bg)",
+                  border: "1px solid var(--landing-card-border)",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)")}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)")}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--landing-card-border-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--landing-card-border)")}
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
-                  style={{ background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.15)" }}
+                  style={{ background: "var(--landing-step-bg)", border: "1px solid rgba(37,99,235,0.15)" }}
                 >
                   <BenefitIcon type={b.icon} />
                 </div>
                 <h3 className="font-bold mb-2">{b.title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: "#8b9cb5" }}>{b.desc}</p>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--landing-text-muted)" }}>{b.desc}</p>
               </div>
             ))}
           </div>
@@ -286,14 +287,14 @@ export default function LandingPage() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-24 px-6" style={{ background: "rgba(13,31,60,0.5)" }}>
+      <section className="py-24 px-6" style={{ background: "var(--landing-section-alt)" }}>
         <div
           data-reveal
           className="max-w-2xl mx-auto text-center"
           style={{ opacity: 0, transform: "translateY(24px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start Earning?</h2>
-          <p className="mb-10" style={{ color: "#8b9cb5" }}>
+          <p className="mb-10" style={{ color: "var(--landing-text-muted)" }}>
             Apply now and start earning commissions on premium longevity products.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -308,9 +309,9 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="px-8 py-3.5 text-white font-semibold rounded-lg transition text-base w-full sm:w-auto text-center"
-              style={{ border: "1px solid rgba(255,255,255,0.18)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+              className="px-8 py-3.5 font-semibold rounded-lg transition text-base w-full sm:w-auto text-center"
+              style={{ color: "var(--landing-text)", border: "1px solid var(--landing-login-border)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--landing-login-hover)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               Affiliate Login
@@ -320,17 +321,17 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-12 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <footer className="py-12 px-6" style={{ borderTop: "1px solid var(--landing-footer-border)" }}>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Biolongevity Labs" className="h-6 w-auto opacity-60" />
-            <span className="text-sm" style={{ color: "#8b9cb5" }}>&copy; {new Date().getFullYear()} F2 Nutrition LLC</span>
+            <span className="text-sm" style={{ color: "var(--landing-text-muted)" }}>&copy; {new Date().getFullYear()} F2 Nutrition LLC</span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: "#8b9cb5" }}>
-            <a href="https://biolongevitylabs.com" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Main Site</a>
-            <a href="https://biolongevitylabs.com/policies/terms-of-service" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Terms</a>
-            <a href="https://biolongevitylabs.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">Privacy</a>
-            <Link href="/dashboard" className="transition hover:text-white">Admin Dashboard</Link>
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm" style={{ color: "var(--landing-text-muted)" }}>
+            <a href="https://biolongevitylabs.com" target="_blank" rel="noopener noreferrer" className="transition" style={{ color: "var(--landing-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-text)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-text-muted)")}>Main Site</a>
+            <a href="https://biolongevitylabs.com/policies/terms-of-service" target="_blank" rel="noopener noreferrer" className="transition" style={{ color: "var(--landing-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-text)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-text-muted)")}>Terms</a>
+            <a href="https://biolongevitylabs.com/policies/privacy-policy" target="_blank" rel="noopener noreferrer" className="transition" style={{ color: "var(--landing-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-text)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-text-muted)")}>Privacy</a>
+            <Link href="/dashboard" className="transition" style={{ color: "var(--landing-text-muted)" }} onMouseEnter={(e) => (e.currentTarget.style.color = "var(--landing-text)")} onMouseLeave={(e) => (e.currentTarget.style.color = "var(--landing-text-muted)")}>Admin Dashboard</Link>
           </div>
         </div>
       </footer>

@@ -22,13 +22,15 @@
     "html2canvas": "^1.4.1",
     "klaviyo-api": "^21.0.0",
     "next": "16.1.6",
+    "next-themes": "^0.4.6",
     "papaparse": "^5.5.3",
     "prisma": "^6.19.2",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-qr-code": "^2.0.18",
-    "resend": "^6.9.2"
+    "resend": "^6.9.2",
+    "shepherd.js": "^15.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

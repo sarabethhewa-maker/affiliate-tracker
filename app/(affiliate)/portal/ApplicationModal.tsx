@@ -3,14 +3,14 @@
 import { useState } from "react";
 
 const THEME = {
-  bg: "#ffffff",
-  inputBg: "#f8f9fa",
-  border: "#e2e8f0",
-  text: "#1a1a2e",
-  textMuted: "#4a5568",
-  accent: "#1a4a8a",
-  gold: "#f0c040",
-  success: "#38a169",
+  bg: "var(--theme-card)",
+  inputBg: "var(--theme-input-bg)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  gold: "var(--theme-gold)",
+  success: "var(--theme-success)",
 };
 
 const MARKETING_CHANNELS = [

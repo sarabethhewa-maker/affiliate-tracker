@@ -3,12 +3,12 @@
 import Link from "next/link";
 
 const THEME = {
-  bg: "#f8f9fa",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a2e",
-  textMuted: "#4a5568",
-  accent: "#1a4a8a",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
 };
 
 type Props = {

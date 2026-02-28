@@ -4,18 +4,18 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 const THEME = {
-  bg: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a2e",
-  textMuted: "#4a5568",
-  accent: "#1a4a8a",
-  success: "#0d7a3d",
-  successBg: "#dcfce7",
-  warning: "#b45309",
-  warningBg: "#fef3c7",
-  error: "#b91c1c",
-  errorBg: "#fee2e2",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  success: "var(--theme-success)",
+  successBg: "var(--theme-success-bg)",
+  warning: "var(--theme-warning)",
+  warningBg: "var(--theme-warning-bg)",
+  error: "var(--theme-error)",
+  errorBg: "var(--theme-error-bg)",
 };
 
 type OrderItem = { name?: string; quantity?: number; total?: string };

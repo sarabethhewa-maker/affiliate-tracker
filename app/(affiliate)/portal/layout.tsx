@@ -7,16 +7,17 @@ import { useAuth, UserButton } from "@clerk/nextjs";
 import OnboardingChecklist from "./OnboardingChecklist";
 import ChatWidget from "@/app/components/ChatWidget";
 import { GuidedTour, getPortalTourSteps } from "@/app/components/GuidedTour";
+import ThemeToggle from "@/app/components/ThemeToggle";
 
 const THEME = {
-  bg: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a1a",
-  textMuted: "#4a5568",
-  accent: "#1e3a5f",
-  accentLight: "#3a7ca5",
-  active: "#1e3a5f",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  accentLight: "var(--theme-accent-light)",
+  active: "var(--theme-accent)",
 };
 
 type NotificationItem = { id: string; type: string; title: string; body: string; read: boolean; createdAt: string; link?: string; meta?: Record<string, unknown> };
@@ -163,7 +164,7 @@ function NotificationBell() {
             maxHeight: 450,
             overflow: "hidden",
             background: THEME.card,
-            border: "1px solid #e5e7eb",
+            border: `1px solid ${THEME.border}`,
             borderRadius: 12,
             boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
             zIndex: 200,
@@ -201,7 +202,7 @@ function NotificationBell() {
                     padding: "12px 16px",
                     border: "none",
                     borderBottom: `1px solid ${THEME.border}`,
-                    background: n.read ? THEME.card : "#f0f5ff",
+                    background: n.read ? THEME.card : "var(--theme-unread-bg)",
                     cursor: "pointer",
                     display: "flex",
                     gap: 10,
@@ -316,6 +317,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               Admin Dashboard
             </Link>
           )}
+          <ThemeToggle />
           <NotificationBell />
           <UserButton />
         </div>

@@ -5,14 +5,14 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 
 const THEME = {
-  bg: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a1a",
-  textMuted: "#4a5568",
-  accent: "#1e3a5f",
-  success: "#0d7a3d",
-  warning: "#b45309",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  success: "var(--theme-success)",
+  warning: "var(--theme-warning)",
 };
 
 const STORAGE_KEYS = {
@@ -62,10 +62,10 @@ export default function OnboardingChecklist({ children }: { children: React.Reac
 
   const steps = [
     { id: "account", label: "Account created", done: accountCreated, href: null },
-    { id: "link", label: "Copy your tracking link", done: copiedLink, href: "/portal/dashboard" },
-    { id: "payout", label: "Set up your payout method", done: payoutSetup, href: "/api/me/tipalti-onboarding" },
+    { id: "link", label: "Copy your tracking link", done: copiedLink, href: "/portal/dashboard#your-links" },
+    { id: "payout", label: "Set up your payout method", done: payoutSetup, href: "/portal/payouts" },
     { id: "share", label: "Make your first share", done: visitedLinks, href: "/portal/links" },
-    { id: "recruit", label: "Recruit your first sub-affiliate", done: firstRecruit, href: "/portal/dashboard" },
+    { id: "recruit", label: "Recruit your first sub-affiliate", done: firstRecruit, href: "/portal/links" },
   ];
 
   const completed = steps.filter((s) => s.done).length;
@@ -141,11 +141,7 @@ export default function OnboardingChecklist({ children }: { children: React.Reac
                   <span style={{ fontSize: 18 }}>{s.done ? "✓" : "□"}</span>
                   <span style={{ flex: 1, color: s.done ? THEME.textMuted : THEME.text, fontSize: 14 }}>{s.label}</span>
                   {!s.done && s.href && (
-                    s.href.startsWith("http") || s.href.startsWith("/api/") ? (
-                      <a href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</a>
-                    ) : (
-                      <Link href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</Link>
-                    )
+                    <Link href={s.href} style={{ padding: "6px 12px", background: THEME.accent, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 600, textDecoration: "none" }}>Go →</Link>
                   )}
                 </li>
               ))}

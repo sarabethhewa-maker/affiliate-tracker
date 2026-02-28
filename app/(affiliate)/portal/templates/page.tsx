@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 
 const THEME = {
-  bg: "#f8f9fa",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a2e",
-  textMuted: "#4a5568",
-  accent: "#1a4a8a",
-  success: "#38a169",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  success: "var(--theme-success)",
 };
 
 const CATEGORY_TABS = [

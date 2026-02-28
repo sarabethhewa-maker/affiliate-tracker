@@ -5,16 +5,17 @@ import { useSearchParams } from "next/navigation";
 import QRCode from "react-qr-code";
 import html2canvas from "html2canvas";
 import { setOnboardingCopiedLink, setOnboardingVisitedLinks } from "../OnboardingChecklist";
+import { getAvatarColor } from "@/lib/avatarColor";
 
 const THEME = {
-  bg: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
-  text: "#1a1a1a",
-  textMuted: "#4a5568",
-  accent: "#1e3a5f",
-  accentLight: "#3a7ca5",
-  success: "#0d7a3d",
+  bg: "var(--theme-bg)",
+  card: "var(--theme-card)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  accentLight: "var(--theme-accent-light)",
+  success: "var(--theme-success)",
 };
 
 type MeResponse = {
@@ -159,6 +160,8 @@ export default function PortalLinksPage() {
   const handle = aff.socialHandle ? aff.socialHandle.replace(/^@/, "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30) : "";
   const slugSuggestions = [first, full, ...(handle.length >= 3 ? [handle] : [])].filter((s, i, arr) => s.length >= 3 && arr.indexOf(s) === i);
   const tierName = data.tiers?.[data.tierIndex ?? 0]?.name ?? "Affiliate";
+  const tierCount = data.tiers?.length ?? 3;
+  const avatarC = getAvatarColor(aff.name, String(data.tierIndex ?? 0), tierCount);
   const commissionPct = data.commissionRate ?? 10;
   const shareCaption = `I partner with @biolongevitylabs and earn commission on every sale 💊 Use my link to shop and join my team: ${trackingLink} #peptides #biohacking`;
 
@@ -394,7 +397,7 @@ export default function PortalLinksPage() {
         >
           <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16, color: THEME.text }}>Join my team at Biolongevity Labs</h3>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-            <div style={{ width: 44, height: 44, borderRadius: "50%", background: THEME.accent, color: THEME.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>{aff.name.charAt(0)}</div>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: avatarC.bg, color: avatarC.text, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>{aff.name.charAt(0)}</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{aff.name}</div>
               <span style={{ fontSize: 12, color: THEME.accent, fontWeight: 600, textTransform: "uppercase" }}>{tierName}</span>

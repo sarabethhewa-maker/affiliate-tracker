@@ -5,14 +5,14 @@ import { SignInButton } from "@clerk/nextjs";
 import ApplicationModal from "./ApplicationModal";
 
 const THEME = {
-  bg: "#ffffff",
-  bgAlt: "#f8f9fa",
-  border: "#e2e8f0",
-  text: "#1a1a2e",
-  textMuted: "#4a5568",
-  accent: "#1a4a8a",
-  gold: "#f0c040",
-  success: "#38a169",
+  bg: "var(--theme-card)",
+  bgAlt: "var(--theme-bg-alt)",
+  border: "var(--theme-border)",
+  text: "var(--theme-text)",
+  textMuted: "var(--theme-text-muted)",
+  accent: "var(--theme-accent)",
+  gold: "var(--theme-gold)",
+  success: "var(--theme-success)",
 };
 
 const benefits = [
@@ -67,6 +67,11 @@ export default function PortalLanding({ prefilledEmail = "", autoOpenModal: _aut
   return (
     <>
       <div style={{ minHeight: "100vh", background: THEME.bg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+        {prefilledEmail && (
+          <div style={{ background: THEME.bgAlt, borderBottom: `1px solid ${THEME.border}`, padding: "12px 24px", textAlign: "center", fontSize: 14, color: THEME.textMuted }}>
+            No affiliate account found for your email. Contact the program admin if you believe this is an error.
+          </div>
+        )}
         {/* Hero */}
         <section
           style={{
