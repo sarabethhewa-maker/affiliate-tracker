@@ -9,9 +9,10 @@ export type TierRow = {
 };
 
 export const DEFAULT_TIERS: TierRow[] = [
-  { name: 'Silver', commission: 10, mlm2: 3, mlm3: 1, threshold: 0 },
-  { name: 'Gold', commission: 15, mlm2: 4, mlm3: 1.5, threshold: 2000 },
-  { name: 'Master', commission: 20, mlm2: 5, mlm3: 2, threshold: 5000 },
+  { name: 'Bronze', commission: 5, mlm2: 2, mlm3: 0.5, threshold: 0 },
+  { name: 'Silver', commission: 10, mlm2: 3, mlm3: 1, threshold: 500 },
+  { name: 'Gold', commission: 15, mlm2: 4, mlm3: 1.5, threshold: 1000 },
+  { name: 'Master', commission: 20, mlm2: 5, mlm3: 2, threshold: 2000 },
 ];
 
 export const DEFAULT_PROGRAM_NAME = 'Biolongevity Labs Affiliate Program';
@@ -186,21 +187,34 @@ export async function isAdmin(email: string | undefined | null): Promise<boolean
   return false;
 }
 
-/** Get tier index (0-based) for a given monthly revenue based on tier thresholds (tiers ordered lowest to highest). */
+/** Get tier index (0-based, into the original tiers array) for a given revenue. Handles unsorted tiers. */
 export function getTierIndexForRevenue(monthlyRevenue: number, tiers: TierRow[]): number {
-  let index = 0;
-  for (let i = 0; i < tiers.length; i++) {
-    if (monthlyRevenue >= tiers[i].threshold) index = i;
+  // Sort by threshold descending so we match the HIGHEST qualifying tier first
+  const sorted = tiers
+    .map((t, i) => ({ threshold: t.threshold, originalIndex: i }))
+    .sort((a, b) => b.threshold - a.threshold);
+
+  for (const entry of sorted) {
+    if (monthlyRevenue >= entry.threshold) return entry.originalIndex;
   }
-  return index;
+  // Fallback: return the tier with the lowest threshold
+  return sorted.length > 0 ? sorted[sorted.length - 1].originalIndex : 0;
 }
 
-/** Re-evaluate all affiliates' tiers from current-month conversion revenue. Call after conversions change. */
+/** Admin emails that always get the highest tier. */
+const ADMIN_EMAILS = [
+  'sarabeth.hewa@gmail.com',
+  'matt@coresciencelab.com',
+  'bgeorge@ethoscap.com',
+  'jr@lyv-wellness.com',
+  'gsaker@ethoscap.com',
+  'patrick@techguysfixmarketing.com',
+];
+
+/** Re-evaluate all affiliates' tiers from total revenue (live conversions + historical from notes). */
 export async function recalculateTiers(): Promise<void> {
+  const { parseHistoricalStats } = await import('@/lib/parseHistoricalStats');
   const settings = await getSettings();
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
 
   const affiliates = await prisma.affiliate.findMany({
     where: { deletedAt: null },
@@ -208,29 +222,69 @@ export async function recalculateTiers(): Promise<void> {
   });
 
   const { logActivity } = await import('@/lib/activity');
+  const sortedDesc = [...settings.tiers].sort((a, b) => b.threshold - a.threshold);
+  const highestTierName = sortedDesc.length > 0
+    ? sortedDesc[0].name.toLowerCase()
+    : 'master';
 
   for (const aff of affiliates) {
-    const monthlyRevenue = aff.conversions
-      .filter((c) => {
-        const d = new Date(c.createdAt);
-        return d.getFullYear() === year && d.getMonth() === month;
-      })
-      .reduce((s, c) => s + c.amount, 0);
+    // Admin emails always get highest tier
+    const isAdminEmail = ADMIN_EMAILS.some(
+      (e) => e.toLowerCase() === aff.email.toLowerCase()
+    );
 
-    const tierIndex = getTierIndexForRevenue(monthlyRevenue, settings.tiers);
-    const oldIndex = parseInt(aff.tier, 10) || 0;
-    if (tierIndex !== oldIndex) {
+    let newTierName: string;
+    let newTierIndex: number;
+
+    if (isAdminEmail) {
+      newTierName = highestTierName;
+      newTierIndex = settings.tiers.findIndex(
+        (t) => t.name.toLowerCase() === highestTierName
+      );
+    } else {
+      // Total revenue = live conversions + historical from notes
+      const liveRevenue = aff.conversions.reduce((s, c) => s + c.amount, 0);
+      const histStats = parseHistoricalStats(aff.notes ?? null);
+      const totalRevenue = liveRevenue + (histStats?.revenue ?? 0);
+      newTierIndex = getTierIndexForRevenue(totalRevenue, settings.tiers);
+      newTierName = settings.tiers[newTierIndex]?.name.toLowerCase() ?? 'bronze';
+    }
+
+    // Normalize old index-format tiers ("0" → "bronze", "1" → "silver", etc.)
+    let oldTierName = (aff.tier ?? '').toLowerCase();
+    if (/^\d+$/.test(oldTierName)) {
+      const idx = parseInt(oldTierName, 10);
+      oldTierName = settings.tiers[idx]?.name.toLowerCase() ?? oldTierName;
+    }
+
+    if (newTierName !== oldTierName) {
       const updated = await prisma.affiliate.update({
         where: { id: aff.id },
-        data: { tier: String(tierIndex) },
+        data: { tier: newTierName },
       });
-      if (tierIndex > oldIndex) {
-        const newTierName = settings.tiers[tierIndex]?.name ?? 'Unknown';
-        await logActivity({
-          type: 'tier_upgrade',
-          message: `${aff.name} upgraded to ${newTierName} tier`,
-          affiliateId: aff.id,
+
+      // Determine if this is an upgrade by comparing thresholds (not indices, since tiers may be unsorted)
+      const oldThreshold = settings.tiers.find(
+        (t) => t.name.toLowerCase() === oldTierName
+      )?.threshold ?? 0;
+      const newThreshold = settings.tiers[newTierIndex]?.threshold ?? 0;
+      if (newThreshold > oldThreshold) {
+        // Dedup: skip if a matching tier_upgrade was logged in the last hour
+        const recentLog = await prisma.activityLog.findFirst({
+          where: {
+            affiliateId: aff.id,
+            type: 'tier_upgrade',
+            createdAt: { gte: new Date(Date.now() - 3600_000) },
+          },
         });
+        if (!recentLog) {
+          const displayName = settings.tiers[newTierIndex]?.name ?? 'Unknown';
+          await logActivity({
+            type: 'tier_upgrade',
+            message: `${aff.name} upgraded to ${displayName} tier`,
+            affiliateId: aff.id,
+          });
+        }
       }
       try {
         const { syncAffiliate } = await import('@/lib/emailMarketing');
