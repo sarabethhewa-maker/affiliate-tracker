@@ -6,9 +6,11 @@ import { SettingsProvider } from '@/app/contexts/SettingsContext';
 
 export default function ClerkLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isLandingPage = pathname === '/';
   const isJoinPage = pathname === '/join';
+  const isPortal = pathname === '/portal' || pathname.startsWith('/portal/');
 
-  if (isJoinPage) return <>{children}</>;
+  if (isLandingPage || isJoinPage) return <>{children}</>;
 
   return (
     <>
@@ -38,9 +40,11 @@ export default function ClerkLayoutWrapper({ children }: { children: React.React
       </SignedOut>
       <SignedIn>
         <SettingsProvider>
-          <div style={{ position: 'fixed', top: 16, right: 20, zIndex: 999 }}>
-            <UserButton />
-          </div>
+          {!isPortal && (
+            <div style={{ position: 'fixed', top: 16, right: 20, zIndex: 999 }}>
+              <UserButton />
+            </div>
+          )}
           {children}
         </SettingsProvider>
       </SignedIn>
